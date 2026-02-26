@@ -4,7 +4,7 @@ import { Filter } from 'lucide-react';
 /**
  * Componente para filtrar materias por diferentes criterios
  */
-const Filters = ({ activeFilters = [], onFilterChange }) => {
+const Filters = ({ activeFilters = [], onFilterChange, showElectives = true, onToggleElectives }) => {
   const filterOptions = [
     { id: 'todas', label: 'Todas', color: 'gray' },
     { id: 'no-cursadas', label: 'No Cursadas', color: 'gray' },
@@ -21,6 +21,7 @@ const Filters = ({ activeFilters = [], onFilterChange }) => {
       green: isActive ? 'bg-green-600 text-white' : 'bg-green-500/20 text-green-200 hover:bg-green-500/30',
       blue: isActive ? 'bg-blue-600 text-white' : 'bg-blue-500/20 text-blue-200 hover:bg-blue-500/30',
       purple: isActive ? 'bg-purple-600 text-white' : 'bg-purple-500/20 text-purple-200 hover:bg-purple-500/30',
+      indigo: isActive ? 'bg-indigo-600 text-white' : 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30',
     };
 
     return colorMap[filter.color] || colorMap.gray;
@@ -67,6 +68,22 @@ const Filters = ({ activeFilters = [], onFilterChange }) => {
           );
         })}
       </div>
+
+      {/* Toggle de Electivas (separado) */}
+      {onToggleElectives && (
+        <div className="pt-2 border-t border-gray-700/50">
+          <button
+            onClick={() => onToggleElectives(!showElectives)}
+            className={`
+              px-3 py-1.5 rounded-full text-xs font-medium
+              transition-all duration-200
+              ${showElectives ? 'bg-indigo-600 text-white ring-2 ring-offset-2 ring-offset-gray-900' : 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30'}
+            `}
+          >
+            {showElectives ? '✓ ' : ''}Mostrar Electivas
+          </button>
+        </div>
+      )}
 
       {effectiveFilters.length > 0 && !effectiveFilters.includes('todas') && (
         <div className="text-xs text-gray-400 italic">

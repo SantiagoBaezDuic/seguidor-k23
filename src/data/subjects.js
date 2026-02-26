@@ -1,18 +1,21 @@
 // Plan de Estudios 2023 - Ingeniería en Sistemas de Información
 // UTN Facultad Regional Buenos Aires
 // 
-// Total: 37 materias (falta ID 26 en la secuencia)
+// Total: 56 materias (37 obligatorias + 19 electivas) - falta ID 26 y 38 en la secuencia
 // IMPORTANTE: Los arrays rc y ra referencian IDs de materias, NO índices del array
 // 
 // Estructura:
 // - id: ID único de la materia
 // - n: Nombre de la materia
-// - l: Nivel (1 a 5)
-// - rc: Requiere cursada/regularizada (IDs de materias que deben estar en estado 1 o 2)
-// - ra: Requiere aprobación (IDs de materias que deben estar en estado 2)
+// - l: Nivel (1 a 5 para obligatorias, 6 para electivas)
+// - rc: Requiere cursada/regularizada (Array o {all: [], any: []} para lógica OR)
+// - ra: Requiere aprobación (Array o {all: [], any: []})
 // - it: Forma parte del Título Intermedio "Analista Universitario de Sistemas" (true/false)
 // - h: Horas semanales
 // - m: Modalidad ('A' = Anual, 'C' = Cuatrimestral)
+// - isElective: Marca materias electivas (opcional, solo en nivel 6)
+// - hideCorrelations: Oculta flechas de correlatividad en la UI (opcional)
+// - code: Código abreviado para mostrar en la card (opcional)
 
 export const subjects = [
   // NIVEL 1 (orden de arriba a abajo según imagen oficial)
@@ -61,6 +64,30 @@ export const subjects = [
   { id: 34, n: "Gestión Gerencial", l: 5, rc: [24, 30], ra: [18], it: false, h: 6, m: 'C' },
   { id: 33, n: "Sistemas de Gestión", l: 5, rc: [30, 27], ra: [23], it: false, h: 6, m: 'C' },
   { id: 35, n: "Seguridad en los Sistemas de Info.", l: 5, rc: [38, 30], ra: [20, 21], it: false, h: 6, m: 'C' },
+
+  // ELECTIVAS (pueden cursarse en 3° o 4° año)
+  // 19 materias electivas - Todas cuatrimestrales de 6 horas
+  // Correlativas: Análisis SI (16) Y (Sintaxis (13) O Paradigmas (14))
+  // Excepción: TAP requiere las 3 materias
+  { id: 39, n: "Administración Estratégica del Capital Humano", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'AECH' },
+  { id: 40, n: "Ciberseguridad", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'Ciber' },
+  { id: 41, n: "Comunicación Gráfica y Visual", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'CGV' },
+  { id: 42, n: "Creatividad e Innovación", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'CeI' },
+  { id: 43, n: "Criptografía", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'Cripto' },
+  { id: 44, n: "Experiencia de Usuario y Accesibilidad", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'EXUA' },
+  { id: 45, n: "Gerenciamiento de Proyectos de Sistemas de Información", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'GPSI' },
+  { id: 46, n: "Gestión del Talento Humano", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'GTH' },
+  { id: 47, n: "Ingeniería de Requisitos", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'IR' },
+  { id: 48, n: "Metodología de Investigación Científico-Tecnológica", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'MICT' },
+  { id: 49, n: "Metodología de la Conducción de Equipos de Trabajo", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'MCET' },
+  { id: 50, n: "Patrones Algorítmicos", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'PA' },
+  { id: 51, n: "Procesamiento del Lenguaje Natural", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'PLN' },
+  { id: 52, n: "Química Ambiental", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'QA' },
+  { id: 53, n: "Técnicas Avanzadas de Programación", l: 6, rc: { all: [16, 13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'TAP' },
+  { id: 54, n: "Técnicas de Gráficos por Computadora", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'TGC' },
+  { id: 55, n: "Tecnologías Avanzadas en la Construcción de Software", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'TACS' },
+  { id: 56, n: "Tendencias y Escenarios Tecnológicos", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'TET' },
+  { id: 57, n: "Transformación Digital", l: 6, rc: { all: [16], any: [13, 14] }, ra: [], it: false, h: 6, m: 'C', isElective: true, hideCorrelations: true, code: 'TD' },
 ];
 
 export default subjects;

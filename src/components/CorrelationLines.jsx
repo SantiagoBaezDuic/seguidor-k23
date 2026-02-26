@@ -4,7 +4,7 @@ import subjects from '../data/subjects';
 /**
  * Componente para dibujar líneas SVG permanentes entre materias y sus correlativas
  */
-const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjectsWithStatus }) => {
+const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjectsWithStatus, showElectives }) => {
   const [allLines, setAllLines] = useState([]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const updateTimeoutRef = useRef(null);
@@ -22,7 +22,8 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
       const containerRect = container.getBoundingClientRect();
       const newLines = [];
 
-      // Actualizar dimensiones del SVG
+      // Actualizar dimensiones del SVG basadas en scrollWidth/scrollHeight
+      // (necesario para que coincida con el sistema de coordenadas de las líneas)
       setDimensions({
         width: container.scrollWidth,
         height: container.scrollHeight
@@ -31,6 +32,9 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
       // Para cada materia, dibujar líneas a sus correlativas
       // Solo mostrar líneas que llegan a materias NO CURSADAS y NO HABILITADAS
       subjectsWithStatus.forEach(subject => {
+        // Saltar materias con correlaciones ocultas (ej: electivas)
+        if (subject.hideCorrelations || subject.isElective) return;
+        
         // Filtrar: solo dibujar líneas si la materia destino no está cursada Y no está habilitada
         const subjectState = states[subject.id] || 0;
         if (subjectState !== 0) return; // Saltar materias regulares o aprobadas
@@ -102,7 +106,12 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
-    updateTimeoutRef.current = setTimeout(updateLines, 200);
+    updateTimeoutRef.current = setTimeout(() => {
+      // RequestAnimationFrame adicional para asegurar que el layout se completó
+      requestAnimationFrame(() => {
+        requestAnimationFrame(updateLines);
+      });
+    }, 100);
 
     // Actualizar líneas cuando se hace scroll
     const handleScroll = () => {
@@ -123,7 +132,7 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
         container.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [containerRef, highlightedSubjectId, states, subjectsWithStatus]);
+  }, [containerRef, highlightedSubjectId, states, subjectsWithStatus, showElectives]);
 
   /**
    * Genera un path SVG con curva bezier
@@ -145,13 +154,11 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none overflow-visible"
+      className="absolute top-0 left-0 pointer-events-none"
       style={{ 
         zIndex: 0,
-        width: '100%',
-        height: '100%',
-        minWidth: `${dimensions.width}px`,
-        minHeight: `${dimensions.height}px`
+        width: `${dimensions.width}px`,
+        height: `${dimensions.height}px`
       }}
       viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
     >

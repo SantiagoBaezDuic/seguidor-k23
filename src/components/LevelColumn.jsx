@@ -18,7 +18,8 @@ const LevelColumn = ({
     2: '2° Año',
     3: '3° Año',
     4: '4° Año',
-    5: '5° Año'
+    5: '5° Año',
+    6: 'Electivas (3°/4°)'
   };
 
   return (

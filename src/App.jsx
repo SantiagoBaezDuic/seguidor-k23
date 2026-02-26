@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { useSubjectsState } from './hooks/useSubjectsState';
 import { useScheduleState } from './hooks/useScheduleState';
 import { useComparisonState } from './hooks/useComparisonState';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import { getAffectedSubjects } from './utils/correlations';
 import subjects from './data/subjects';
 
@@ -33,6 +34,7 @@ function App() {
   const [highlightedForLines, setHighlightedForLines] = useState(null);
   const [activeFilters, setActiveFilters] = useState(['todas']);
   const [selectedCourses, setSelectedCourses] = useState([]);
+  const [showElectives, setShowElectives] = useLocalStorage('isi-show-electives', true);
   const containerRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
 
@@ -144,17 +146,22 @@ function App() {
 
   /**
    * Obtiene materias de un nivel específico
+   * Excluye nivel 6 (electivas) si el toggle está desactivado
    */
   const getSubjectsByLevel = (level) => {
+    // Si es nivel 6 y el toggle está desactivado, devolver array vacío
+    if (level === 6 && !showElectives) return [];
+    
     const levelSubjects = subjectsWithStatus.filter(s => s.l === level);
     return filterSubjects(levelSubjects);
   };
 
   /**
    * Obtiene materias disponibles para cursar (no cursadas y habilitadas)
+   * Excluye electivas si el toggle está desactivado
    */
   const availableSubjects = subjectsWithStatus.filter(
-    s => s.state === 0 && s.canEnroll === true
+    s => s.state === 0 && s.canEnroll === true && (showElectives || s.l !== 6)
   );
 
   /**
@@ -171,7 +178,7 @@ function App() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold text-center text-blue-400">
-              Plan de Estudios ISI 2023 - UTN FRBA
+              Plan de Estudios K23 - UTN FRBA
             </h1>
             <p className="text-center text-gray-400 text-sm mt-1">
               Ingeniería en Sistemas de Información
@@ -192,6 +199,8 @@ function App() {
           <Filters
             activeFilters={activeFilters}
             onFilterChange={setActiveFilters}
+            showElectives={showElectives}
+            onToggleElectives={setShowElectives}
           />
           <ExportImport
             currentStates={states}
@@ -218,7 +227,7 @@ function App() {
       <div className="w-full px-4 pb-8">
         <div 
           ref={containerRef}
-          className="relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto"
+          className="relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto overflow-y-auto max-h-[600px]"
         >
           {/* Líneas de correlatividades */}
           <CorrelationLines
@@ -226,10 +235,14 @@ function App() {
             containerRef={containerRef}
             states={states}
             subjectsWithStatus={subjectsWithStatus}
+            showElectives={showElectives}
           />
 
           {/* Grid horizontal de niveles */}
-          <div className="flex gap-10 min-w-min">
+          <div 
+            className="flex gap-10 w-max"
+            data-grid="levels"
+          >
             {[1, 2, 3, 4, 5].map(level => {
               const levelSubjects = getSubjectsByLevel(level);
               
@@ -245,6 +258,19 @@ function App() {
                 />
               );
             })}
+            
+            {/* Electivas (nivel 6) - Condicional */}
+            {showElectives && (
+              <LevelColumn
+                key={6}
+                level={6}
+                subjects={getSubjectsByLevel(6)}
+                states={states}
+                onSubjectClick={handleSubjectClick}
+                highlightedIds={highlightedSubjects}
+                comparisonData={hasClassmates ? { userStates: states, classmates } : null}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -9,6 +9,82 @@ export const getSubjectsByIds = (ids) => {
   return ids.map(id => subjects.find(s => s.id === id)).filter(Boolean);
 };
 
+/**
+ * Convierte estructura de correlativas en texto legible para tooltips
+ * @param {Array|Object} correlatives - Correlativas en formato legacy o nuevo
+ * @returns {string} - Texto formateado (ej: "A, B, C" o "A Y (B O C)")
+ */
+export const correlatesToText = (correlatives) => {
+  if (!correlatives) return '';
+  
+  // Formato legacy: array simple
+  if (Array.isArray(correlatives)) {
+    if (correlatives.length === 0) return '';
+    const names = getSubjectsByIds(correlatives).map(s => s.n);
+    return names.join(', ');
+  }
+  
+  // Formato nuevo: objeto con all/any
+  if (typeof correlatives === 'object') {
+    const parts = [];
+    
+    // Parte "all" (AND)
+    if (correlatives.all && correlatives.all.length > 0) {
+      const allNames = getSubjectsByIds(correlatives.all).map(s => s.n);
+      parts.push(allNames.join(', '));
+    }
+    
+    // Parte "any" (OR)  
+    if (correlatives.any && correlatives.any.length > 0) {
+      const anyNames = getSubjectsByIds(correlatives.any).map(s => s.n);
+      parts.push(`(${anyNames.join(' O ')})`);
+    }
+    
+    return parts.join(' Y ');
+  }
+  
+  return '';
+};
+
+/**
+ * Evalúa correlativas con soporte para lógica AND/OR
+ * @param {Array|Object} correlatives - Array simple [1,2] (AND) u objeto {all: [1], any: [2,3]} (AND + OR)
+ * @param {Object} states - Estados de materias
+ * @param {number} requiredState - Estado mínimo requerido (1 o 2)
+ * @returns {boolean}
+ */
+const evaluateCorrelatives = (correlatives, states, requiredState) => {
+  if (!correlatives) return true;
+  
+  // Formato legacy: array simple (todos deben cumplir - AND)
+  if (Array.isArray(correlatives)) {
+    if (correlatives.length === 0) return true;
+    return correlatives.every(reqId => {
+      const state = states[reqId] || 0;
+      return state >= requiredState;
+    });
+  }
+  
+  // Formato nuevo: objeto con all/any (lógica AND + OR)
+  if (typeof correlatives === 'object') {
+    // all: todos deben cumplir (AND)
+    const allOk = !correlatives.all || correlatives.all.length === 0 || correlatives.all.every(reqId => {
+      const state = states[reqId] || 0;
+      return state >= requiredState;
+    });
+    
+    // any: al menos uno debe cumplir (OR)
+    const anyOk = !correlatives.any || correlatives.any.length === 0 || correlatives.any.some(reqId => {
+      const state = states[reqId] || 0;
+      return state >= requiredState;
+    });
+    
+    return allOk && anyOk;
+  }
+  
+  return true;
+};
+
 /** * Verifica si una materia puede ser cursada según las correlativas de cursada y aprobación
  * @param {number} subjectId - ID de la materia
  * @param {Object} states - Objeto con estados de todas las materias {id: estado}
@@ -18,17 +94,11 @@ export const canEnroll = (subjectId, states) => {
   const subject = subjects.find(s => s.id === subjectId);
   if (!subject) return false;
   
-  // Verificar correlativas de cursada (deben estar Regular o Aprobadas)
-  const rcOk = !subject.rc || subject.rc.length === 0 || subject.rc.every(reqId => {
-    const state = states[reqId] || 0;
-    return state === 1 || state === 2;
-  });
+  // Verificar correlativas de cursada (deben estar Regular o Aprobadas - estado >= 1)
+  const rcOk = evaluateCorrelatives(subject.rc, states, 1);
   
-  // Verificar correlativas de aprobación (deben estar Aprobadas)
-  const raOk = !subject.ra || subject.ra.length === 0 || subject.ra.every(reqId => {
-    const state = states[reqId] || 0;
-    return state === 2;
-  });
+  // Verificar correlativas de aprobación (deben estar Aprobadas - estado >= 2)
+  const raOk = evaluateCorrelatives(subject.ra, states, 2);
   
   return rcOk && raOk;
 };
@@ -44,13 +114,34 @@ export const canTakeExam = (subjectId, states) => {
   if (!subject) return false;
   
   // Si no tiene correlativas de aprobación, puede rendir cuando quiera
-  if (!subject.ra || subject.ra.length === 0) return true;
+  if (!subject.ra) return true;
+  if (Array.isArray(subject.ra) && subject.ra.length === 0) return true;
+  if (typeof subject.ra === 'object' && !subject.ra.all && !subject.ra.any) return true;
   
-  // Todas las correlativas de aprobación deben estar en estado 2 (Aprobada)
-  return subject.ra.every(reqId => {
-    const state = states[reqId] || 0;
-    return state === 2;
-  });
+  // Verificar correlativas de aprobación usando evaluateCorrelatives
+  return evaluateCorrelatives(subject.ra, states, 2);
+};
+
+/**
+ * Verifica si un subjectId está incluido en estructura de correlativas (array u objeto)
+ * @param {Array|Object} correlatives - Correlativas en formato legacy o nuevo
+ * @param {number} targetId - ID a buscar
+ * @returns {boolean}
+ */
+const includesInCorrelatives = (correlatives, targetId) => {
+  if (!correlatives) return false;
+  
+  if (Array.isArray(correlatives)) {
+    return correlatives.includes(targetId);
+  }
+  
+  if (typeof correlatives === 'object') {
+    const inAll = correlatives.all && correlatives.all.includes(targetId);
+    const inAny = correlatives.any && correlatives.any.includes(targetId);
+    return inAll || inAny;
+  }
+  
+  return false;
 };
 
 /**
@@ -61,8 +152,8 @@ export const canTakeExam = (subjectId, states) => {
  */
 export const getAffectedSubjects = (subjectId, allSubjects = subjects) => {
   return allSubjects.filter(subject => {
-    const hasInCursada = subject.rc && subject.rc.includes(subjectId);
-    const hasInAprobacion = subject.ra && subject.ra.includes(subjectId);
+    const hasInCursada = includesInCorrelatives(subject.rc, subjectId);
+    const hasInAprobacion = includesInCorrelatives(subject.ra, subjectId);
     return hasInCursada || hasInAprobacion;
   });
 };

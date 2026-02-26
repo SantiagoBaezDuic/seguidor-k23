@@ -1,6 +1,6 @@
 import React from 'react';
 import { Circle, Clock, CheckCircle, GraduationCap, Users } from 'lucide-react';
-import { getSubjectsByIds } from '../utils/correlations';
+import { correlatesToText } from '../utils/correlations';
 
 /**
  * Componente para mostrar una materia individual
@@ -46,13 +46,14 @@ const SubjectCard = ({
   const getTooltip = () => {
     const parts = [subject.n];
     
-    if (subject.rc && subject.rc.length > 0) {
-      const rcNames = getSubjectsByIds(subject.rc).map(s => s.n).join(', ');
-      parts.push(`Cursada: ${rcNames}`);
+    const rcText = correlatesToText(subject.rc);
+    if (rcText) {
+      parts.push(`Cursada: ${rcText}`);
     }
-    if (subject.ra && subject.ra.length > 0) {
-      const raNames = getSubjectsByIds(subject.ra).map(s => s.n).join(', ');
-      parts.push(`Aprobación: ${raNames}`);
+    
+    const raText = correlatesToText(subject.ra);
+    if (raText) {
+      parts.push(`Aprobación: ${raText}`);
     }
     
     return parts.join(' | ');
@@ -101,6 +102,11 @@ const SubjectCard = ({
         {getStateIcon()}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm leading-tight">{subject.n}</h3>
+          {subject.code && (
+            <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30 font-mono">
+              {subject.code}
+            </span>
+          )}
         </div>
       </div>
 
