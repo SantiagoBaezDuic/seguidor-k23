@@ -227,7 +227,7 @@ function App() {
       <div className="w-full px-4 pb-8">
         <div 
           ref={containerRef}
-          className="relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto overflow-y-auto max-h-[600px]"
+          className={`relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto overflow-y-auto ${showElectives ? 'max-h-[600px]' : 'max-h-[800px]'}`}
         >
           {/* Líneas de correlatividades */}
           <CorrelationLines

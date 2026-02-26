@@ -9,6 +9,11 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const updateTimeoutRef = useRef(null);
 
+  // Reset dimensiones inmediatamente cuando cambia showElectives
+  useEffect(() => {
+    setDimensions({ width: 0, height: 0 });
+  }, [showElectives]);
+
   // Calcular todas las líneas de correlatividad
   useEffect(() => {
     if (!containerRef.current) {
@@ -154,11 +159,14 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
 
   return (
     <svg
+      key={`svg-${showElectives ? 'with' : 'without'}-electives`}
       className="absolute top-0 left-0 pointer-events-none"
       style={{ 
         zIndex: 0,
         width: `${dimensions.width}px`,
-        height: `${dimensions.height}px`
+        height: `${dimensions.height}px`,
+        maxWidth: `${dimensions.width}px`,
+        maxHeight: `${dimensions.height}px`
       }}
       viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
     >
