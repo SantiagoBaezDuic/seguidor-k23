@@ -103,7 +103,6 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
         });
       });
 
-      console.log(`CorrelationLines: Dibujadas ${newLines.length} líneas totales`);
       setAllLines(newLines);
     };
 

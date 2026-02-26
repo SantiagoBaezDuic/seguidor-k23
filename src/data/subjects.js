@@ -10,7 +10,7 @@
 // - l: Nivel (1 a 5 para obligatorias, 6 para electivas)
 // - rc: Requiere cursada/regularizada (Array o {all: [], any: []} para lógica OR)
 // - ra: Requiere aprobación (Array o {all: [], any: []})
-// - it: Forma parte del Título Intermedio "Analista Universitario de Sistemas" (true/false)
+// - it: Forma parte del Título Intermedio "Analista de Sistemas" (true/false)
 // - h: Horas semanales
 // - m: Modalidad ('A' = Anual, 'C' = Cuatrimestral)
 // - isElective: Marca materias electivas (opcional, solo en nivel 6)

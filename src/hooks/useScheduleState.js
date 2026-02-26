@@ -18,8 +18,8 @@ export const useScheduleState = () => {
       return false;
     }
     
-    if (startSlot < 0 || startSlot > 19 || endSlot < 0 || endSlot > 19) {
-      console.error('Franja inválida (0-19)');
+    if (startSlot < 0 || startSlot > 18 || endSlot < 0 || endSlot > 18) {
+      console.error('Franja inválida (0-18)');
       return false;
     }
     

@@ -19,13 +19,12 @@ const TIME_SLOTS = [
   { id: 11, time: '16:45-17:30', period: 'T', label: 'T4' },
   { id: 12, time: '17:30-18:15', period: 'T', label: 'T5' },
   { id: 13, time: '18:15-19:00', period: 'T', label: 'T6' },
-  // Noche (14-19)
-  { id: 14, time: '18:15-19:00', period: 'N', label: 'N0' },
-  { id: 15, time: '19:00-19:45', period: 'N', label: 'N1' },
-  { id: 16, time: '19:45-20:30', period: 'N', label: 'N2' },
-  { id: 17, time: '20:45-21:30', period: 'N', label: 'N3' },
-  { id: 18, time: '21:30-22:15', period: 'N', label: 'N4' },
-  { id: 19, time: '22:15-23:00', period: 'N', label: 'N5' },
+  // Noche (14-18)
+  { id: 14, time: '19:00-19:45', period: 'N', label: 'N0' },
+  { id: 15, time: '19:45-20:30', period: 'N', label: 'N1' },
+  { id: 16, time: '20:45-21:30', period: 'N', label: 'N2' },
+  { id: 17, time: '21:30-22:15', period: 'N', label: 'N3' },
+  { id: 18, time: '22:15-23:00', period: 'N', label: 'N4' },
 ];
 
 const DAYS = [
@@ -53,22 +52,60 @@ const WeeklySchedule = ({
 
   /**
    * Genera un color consistente basado en el ID de la materia
+   * Usa 17 colores (número primo) para evitar colisiones con diferencias múltiplos de 15
    */
   const getSubjectColor = (subjectId, onlyBg = false) => {
     const colors = [
-      { full: 'bg-blue-600 border-blue-500', bg: 'bg-blue-600' },
-      { full: 'bg-green-600 border-green-500', bg: 'bg-green-600' },
-      { full: 'bg-yellow-600 border-yellow-500', bg: 'bg-yellow-600' },
-      { full: 'bg-purple-600 border-purple-500', bg: 'bg-purple-600' },
-      { full: 'bg-pink-600 border-pink-500', bg: 'bg-pink-600' },
-      { full: 'bg-indigo-600 border-indigo-500', bg: 'bg-indigo-600' },
-      { full: 'bg-red-600 border-red-500', bg: 'bg-red-600' },
-      { full: 'bg-teal-600 border-teal-500', bg: 'bg-teal-600' },
-      { full: 'bg-orange-600 border-orange-500', bg: 'bg-orange-600' },
-      { full: 'bg-cyan-600 border-cyan-500', bg: 'bg-cyan-600' },
+      { full: 'bg-blue-500 border-blue-400', bg: 'bg-blue-500' },
+      { full: 'bg-emerald-500 border-emerald-400', bg: 'bg-emerald-500' },
+      { full: 'bg-amber-500 border-amber-400', bg: 'bg-amber-500' },
+      { full: 'bg-purple-500 border-purple-400', bg: 'bg-purple-500' },
+      { full: 'bg-rose-500 border-rose-400', bg: 'bg-rose-500' },
+      { full: 'bg-indigo-500 border-indigo-400', bg: 'bg-indigo-500' },
+      { full: 'bg-cyan-500 border-cyan-400', bg: 'bg-cyan-500' },
+      { full: 'bg-lime-500 border-lime-400', bg: 'bg-lime-500' },
+      { full: 'bg-fuchsia-500 border-fuchsia-400', bg: 'bg-fuchsia-500' },
+      { full: 'bg-orange-500 border-orange-400', bg: 'bg-orange-500' },
+      { full: 'bg-teal-500 border-teal-400', bg: 'bg-teal-500' },
+      { full: 'bg-violet-500 border-violet-400', bg: 'bg-violet-500' },
+      { full: 'bg-sky-500 border-sky-400', bg: 'bg-sky-500' },
+      { full: 'bg-pink-500 border-pink-400', bg: 'bg-pink-500' },
+      { full: 'bg-green-500 border-green-400', bg: 'bg-green-500' },
+      { full: 'bg-red-500 border-red-400', bg: 'bg-red-500' },
+      { full: 'bg-yellow-500 border-yellow-400', bg: 'bg-yellow-500' },
     ];
-    const colorSet = colors[subjectId % colors.length];
+    
+    // Con 17 colores (primo), IDs que difieren por 15 no colisionan
+    const hash = subjectId % colors.length;
+    
+    const colorSet = colors[hash];
     return onlyBg ? colorSet.bg : colorSet.full;
+  };
+
+  /**
+   * Calcula el total de franjas horarias usadas por una materia
+   */
+  const getTotalSlotsUsed = (subjectId) => {
+    const slots = schedule[subjectId] || [];
+    return slots.reduce((total, slot) => total + (slot.endSlot - slot.startSlot), 0);
+  };
+
+  /**
+   * Verifica si una celda es la primera en un bloque (no hay materia arriba)
+   */
+  const isFirstInBlock = (day, slot, subjectId) => {
+    if (slot === 0) return true;
+    const subjectsAbove = getSubjectsInCell(day, slot - 1);
+    return !subjectsAbove.includes(subjectId);
+  };
+
+  /**
+   * Verifica si una celda es la última en un bloque (no hay materia abajo)
+   */
+  const isLastInBlock = (day, slot, subjectId) => {
+    if (slot === TIME_SLOTS.length - 1) return true;
+    const subjectsBelow = getSubjectsInCell(day, slot + 1);
+    return !subjectsBelow.includes(subjectId);
   };
 
   /**
@@ -163,7 +200,7 @@ const WeeklySchedule = ({
             >
               {TIME_SLOTS.map(slot => (
                 <option key={slot.id} value={slot.id}>
-                  {slot.label} ({slot.time})
+                  {slot.label} {slot.time.split('-')[0]}
                 </option>
               ))}
             </select>
@@ -180,7 +217,7 @@ const WeeklySchedule = ({
             >
               {TIME_SLOTS.filter(s => s.id > newSlot.startSlot).map(slot => (
                 <option key={slot.id} value={slot.id}>
-                  {slot.label} ({slot.time})
+                  {slot.label} {slot.time.split('-')[1]}
                 </option>
               ))}
             </select>
@@ -204,15 +241,31 @@ const WeeklySchedule = ({
    */
   const renderSubjectSlots = (subject) => {
     const slots = schedule[subject.id] || [];
+    const totalSlotsUsed = getTotalSlotsUsed(subject.id);
+    const exceededHours = totalSlotsUsed > subject.h;
 
     return (
       <div key={subject.id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h4 className="font-medium text-gray-200 text-sm mb-1">{subject.n}</h4>
-            <span className={`inline-block px-2 py-0.5 rounded text-xs ${getSubjectColor(subject.id)}`}>
-              {slots.length} {slots.length === 1 ? 'bloque' : 'bloques'}
-            </span>
+            <div className="flex items-center gap-2 mb-1">
+              <div className={`w-3 h-3 rounded ${getSubjectColor(subject.id, true)}`} title="Color en el horario"></div>
+              <h4 className="font-medium text-gray-200 text-sm">{subject.n}</h4>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`inline-block px-2 py-0.5 rounded text-xs ${getSubjectColor(subject.id)}`}>
+                {slots.length} {slots.length === 1 ? 'bloque' : 'bloques'}
+              </span>
+              <span className="text-xs text-gray-400">
+                {totalSlotsUsed} {totalSlotsUsed === 1 ? 'franja' : 'franjas'} / {subject.h}h semanales
+              </span>
+              {exceededHours && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-600/20 text-orange-400 border border-orange-600/50">
+                  <AlertTriangle className="w-3 h-3" />
+                  Advertencia: Las franjas asignadas ({totalSlotsUsed}) exceden las horas semanales de la materia ({subject.h}h)
+                </span>
+              )}
+            </div>
           </div>
           
           {showAddForm !== subject.id && (
@@ -304,6 +357,31 @@ const WeeklySchedule = ({
                     <div className="text-[10px]">{slot.time}</div>
                   </td>
                   {DAYS.map(day => {
+                    // Determinar qué hora mostrar en esta celda según si es inicio/fin de bloque
+                    let cellTimeDisplay = null;
+                    const subjectsInSlot = getSubjectsInCell(day.id, slot.id);
+                    
+                    if (subjectsInSlot.length === 1) {
+                      // Solo una materia, verificar si es inicio o fin de bloque
+                      const subjectId = subjectsInSlot[0];
+                      const isFirst = isFirstInBlock(day.id, slot.id, subjectId);
+                      const isLast = isLastInBlock(day.id, slot.id, subjectId);
+                      
+                      if (isFirst && !isLast) {
+                        // Primera celda: mostrar solo hora de inicio
+                        cellTimeDisplay = TIME_SLOTS[slot.id].time.split('-')[0];
+                      } else if (isLast && !isFirst) {
+                        // Última celda: mostrar solo hora de fin
+                        cellTimeDisplay = TIME_SLOTS[slot.id].time.split('-')[1];
+                      } else if (isFirst && isLast) {
+                        // Celda única (bloque de 1 slot): mostrar rango completo
+                        cellTimeDisplay = TIME_SLOTS[slot.id].time;
+                      }
+                      // Si no es ni primera ni última, es una celda intermedia y se fusionó (no se renderiza)
+                    } else if (subjectsInSlot.length > 1) {
+                      // Conflicto: mostrar tiempo completo
+                      cellTimeDisplay = TIME_SLOTS[slot.id].time;
+                    }
                     const subjectsInCell = getSubjectsInCell(day.id, slot.id);
                     const hasConflict = hasConflictInCell(day.id, slot.id);
                     const isEmpty = subjectsInCell.length === 0;
@@ -364,7 +442,10 @@ const WeeklySchedule = ({
                             }`}
                             title={subject.n}
                           >
-                            {useRowSpan ? subject.n : `${subject.n.substring(0, 15)}...`}
+                            <div>{useRowSpan ? subject.n : `${subject.n.substring(0, 15)}...`}</div>
+                            {useRowSpan && cellTimeDisplay && (
+                              <div className="text-xs text-white/70 mt-1">{cellTimeDisplay}</div>
+                            )}
                           </div>
                         ))}
                         {hasConflict && (

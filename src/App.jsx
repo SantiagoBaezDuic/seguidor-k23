@@ -41,6 +41,7 @@ function App() {
   // Hook para manejar horarios
   const {
     schedule,
+    setSchedule,
     addSlot,
     removeSlot,
     syncWithSelectedSubjects,
@@ -65,6 +66,41 @@ function App() {
   useEffect(() => {
     syncWithSelectedSubjects(selectedCourses);
   }, [selectedCourses, syncWithSelectedSubjects]);
+
+  // Sincronizar selectedCourses con materias que tienen horarios al cargar inicialmente
+  useEffect(() => {
+    // Solo sincronizar si selectedCourses está vacío (carga inicial)
+    if (selectedCourses.length === 0 && schedule && Object.keys(schedule).length > 0) {
+      const scheduledSubjectIds = Object.keys(schedule).map(id => parseInt(id));
+      
+      // Filtrar solo las materias que existen en subjectsWithStatus
+      const validScheduledIds = scheduledSubjectIds.filter(id =>
+        subjectsWithStatus.some(s => s.id === id)
+      );
+      
+      if (validScheduledIds.length > 0) {
+        setSelectedCourses(validScheduledIds);
+      }
+    }
+  }, [schedule, subjectsWithStatus, selectedCourses.length]);
+
+  /**
+   * Sincroniza selectedCourses con el schedule importado
+   */
+  const syncSelectedCoursesFromSchedule = (importedSchedule) => {
+    if (importedSchedule && Object.keys(importedSchedule).length > 0) {
+      const scheduledSubjectIds = Object.keys(importedSchedule).map(id => parseInt(id));
+      
+      // Filtrar solo las materias que existen en subjectsWithStatus
+      const validScheduledIds = scheduledSubjectIds.filter(id =>
+        subjectsWithStatus.some(s => s.id === id)
+      );
+      
+      if (validScheduledIds.length > 0) {
+        setSelectedCourses(validScheduledIds);
+      }
+    }
+  };
 
   /**
    * Maneja el click en una materia
@@ -204,7 +240,10 @@ function App() {
           />
           <ExportImport
             currentStates={states}
+            currentSchedule={schedule}
             onImport={importStates}
+            onImportSchedule={setSchedule}
+            onImportSelectedCourses={syncSelectedCoursesFromSchedule}
             onReset={resetStates}
           />
         </div>

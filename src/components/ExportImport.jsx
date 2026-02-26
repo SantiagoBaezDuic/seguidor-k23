@@ -4,7 +4,7 @@ import { Download, Upload, RotateCcw } from 'lucide-react';
 /**
  * Componente para exportar e importar datos de progreso
  */
-const ExportImport = ({ currentStates, onImport, onReset }) => {
+const ExportImport = ({ currentStates, currentSchedule, onImport, onImportSchedule, onImportSelectedCourses, onReset }) => {
   const fileInputRef = useRef(null);
 
   /**
@@ -12,9 +12,10 @@ const ExportImport = ({ currentStates, onImport, onReset }) => {
    */
   const handleExport = () => {
     const data = {
-      version: '1.0',
+      version: '1.1',
       timestamp: new Date().toISOString(),
-      states: currentStates
+      states: currentStates,
+      schedule: currentSchedule || {}
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -54,6 +55,17 @@ const ExportImport = ({ currentStates, onImport, onReset }) => {
 
         if (confirmation) {
           onImport(data.states);
+          
+          // Importar horarios si existen (compatibilidad con versiones antiguas)
+          if (data.schedule && typeof data.schedule === 'object' && onImportSchedule) {
+            onImportSchedule(data.schedule);
+            
+            // Sincronizar materias seleccionadas con el schedule importado
+            if (onImportSelectedCourses) {
+              onImportSelectedCourses(data.schedule);
+            }
+          }
+          
           alert('Datos importados correctamente');
         }
       } catch (error) {

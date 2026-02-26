@@ -1,8 +1,6 @@
 import React from 'react'
 
 function AppTest() {
-  console.log('AppTest renderizando...');
-  
   return (
     <div style={{ 
       minHeight: '100vh', 

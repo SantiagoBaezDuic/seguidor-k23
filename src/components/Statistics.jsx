@@ -55,7 +55,7 @@ const Statistics = ({ progress, intermediateProgress, intermediateCompleted }) =
         <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-2">
           <GraduationCap className="w-4 h-4" />
           Título Intermedio
-          <span className="text-xs text-gray-400">(Analista Universitario)</span>
+          <span className="text-xs text-gray-400">(Analista)</span>
         </h3>
 
         {intermediateCompleted ? (
@@ -66,7 +66,7 @@ const Statistics = ({ progress, intermediateProgress, intermediateCompleted }) =
                 ¡Felicitaciones!
               </div>
               <div className="text-green-200 text-xs">
-                Requisitos de Analista Universitario de Sistemas completados
+                Requisitos de Analista de Sistemas completados
               </div>
             </div>
           </div>
