@@ -61,11 +61,11 @@ const TooltipLegend = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-blue-500/30 text-blue-200 text-[10px] rounded-full">✓ Habilitada cursar</span>
-                  <span className="text-gray-300">Puedes inscribirte</span>
+                  <span className="text-gray-300">Podés inscribirte</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-orange-500/30 text-orange-200 text-[10px] rounded-full">✓ Habilitada final</span>
-                  <span className="text-gray-300">Puedes rendir examen</span>
+                  <span className="text-gray-300">Podés rendir examen</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] rounded-full">✗ Bloqueada</span>

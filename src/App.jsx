@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useSubjectsState } from './hooks/useSubjectsState';
 import { useScheduleState } from './hooks/useScheduleState';
 import { getAffectedSubjects } from './utils/correlations';
@@ -249,6 +250,9 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   );
 }

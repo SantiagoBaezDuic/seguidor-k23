@@ -21,7 +21,7 @@ const ExportImport = ({ currentStates, onImport, onReset }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `plan-isi-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `plan-k23-backup-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
