@@ -54,20 +54,21 @@ const WeeklySchedule = ({
   /**
    * Genera un color consistente basado en el ID de la materia
    */
-  const getSubjectColor = (subjectId) => {
+  const getSubjectColor = (subjectId, onlyBg = false) => {
     const colors = [
-      'bg-blue-600 border-blue-500',
-      'bg-green-600 border-green-500',
-      'bg-yellow-600 border-yellow-500',
-      'bg-purple-600 border-purple-500',
-      'bg-pink-600 border-pink-500',
-      'bg-indigo-600 border-indigo-500',
-      'bg-red-600 border-red-500',
-      'bg-teal-600 border-teal-500',
-      'bg-orange-600 border-orange-500',
-      'bg-cyan-600 border-cyan-500',
+      { full: 'bg-blue-600 border-blue-500', bg: 'bg-blue-600' },
+      { full: 'bg-green-600 border-green-500', bg: 'bg-green-600' },
+      { full: 'bg-yellow-600 border-yellow-500', bg: 'bg-yellow-600' },
+      { full: 'bg-purple-600 border-purple-500', bg: 'bg-purple-600' },
+      { full: 'bg-pink-600 border-pink-500', bg: 'bg-pink-600' },
+      { full: 'bg-indigo-600 border-indigo-500', bg: 'bg-indigo-600' },
+      { full: 'bg-red-600 border-red-500', bg: 'bg-red-600' },
+      { full: 'bg-teal-600 border-teal-500', bg: 'bg-teal-600' },
+      { full: 'bg-orange-600 border-orange-500', bg: 'bg-orange-600' },
+      { full: 'bg-cyan-600 border-cyan-500', bg: 'bg-cyan-600' },
     ];
-    return colors[subjectId % colors.length];
+    const colorSet = colors[subjectId % colors.length];
+    return onlyBg ? colorSet.bg : colorSet.full;
   };
 
   /**
@@ -335,25 +336,31 @@ const WeeklySchedule = ({
 
                     // Determinar si usar rowSpan (solo si hay una sola materia sin conflicto)
                     const useRowSpan = cellsToRender.length === 1 && !hasConflict && cellsToRender[0].rowSpan > 1;
+                    
+                    // Si hay fusión, aplicar el color de fondo a toda la celda
+                    const cellBgColor = useRowSpan ? getSubjectColor(cellsToRender[0].subjectId, true) : '';
 
                     return (
                       <td
                         key={day.id}
                         rowSpan={useRowSpan ? cellsToRender[0].rowSpan : 1}
-                        className={`border border-gray-700 p-1 text-xs relative ${
-                          isEmpty 
-                            ? 'bg-gray-900/30' 
+                        className={`border border-gray-700 text-xs relative ${
+                          useRowSpan 
+                            ? `${cellBgColor} p-3 align-middle` 
+                            : isEmpty 
+                            ? 'bg-gray-900/30 p-1' 
                             : hasConflict 
-                            ? 'bg-red-900/40' 
-                            : ''
-                        } ${useRowSpan ? 'align-middle' : ''}`}
+                            ? 'bg-red-900/40 p-1' 
+                            : 'p-1'
+                        }`}
                       >
                         {cellsToRender.map(({ subjectId, subject, rowSpan }) => (
                           <div
                             key={subjectId}
-                            className={`px-2 py-1 rounded text-xs border ${getSubjectColor(subjectId)} 
-                              text-white font-medium ${hasConflict ? 'opacity-70' : ''} ${
-                              useRowSpan ? 'text-center' : 'truncate'
+                            className={`${
+                              useRowSpan 
+                                ? 'text-white font-semibold text-sm text-center' 
+                                : `px-2 py-1 rounded border ${getSubjectColor(subjectId)} text-white font-medium truncate ${hasConflict ? 'opacity-70' : ''}`
                             }`}
                             title={subject.n}
                           >
