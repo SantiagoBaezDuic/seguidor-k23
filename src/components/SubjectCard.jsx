@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle, Clock, CheckCircle, GraduationCap } from 'lucide-react';
+import { Circle, Clock, CheckCircle, GraduationCap, Users } from 'lucide-react';
 import { getSubjectsByIds } from '../utils/correlations';
 
 /**
@@ -10,7 +10,8 @@ const SubjectCard = ({
   state, 
   canEnroll, 
   canTakeExam, 
-  isHighlighted, 
+  isHighlighted,
+  comparisonInfo, // { canEnrollCount, total, allCanEnroll }
   onClick 
 }) => {
   // Determinar el estilo según el estado
@@ -74,9 +75,24 @@ const SubjectCard = ({
     >
       {/* Badge de Título Intermedio */}
       {subject.it && (
-        <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1">
+        <div className="absolute -top-2 -left-2 bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1 z-10">
           <GraduationCap className="w-3 h-3" />
           <span className="font-semibold">TI</span>
+        </div>
+      )}
+
+      {/* Badge de Comparación con Compañeros */}
+      {comparisonInfo && comparisonInfo.total > 1 && (
+        <div 
+          className={`absolute -top-2 -right-2 text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1 z-10 ${
+            comparisonInfo.allCanEnroll 
+              ? 'bg-cyan-600 text-white' 
+              : 'bg-gray-600 text-gray-200'
+          }`}
+          title={`${comparisonInfo.canEnrollCount} de ${comparisonInfo.total} pueden cursarla`}
+        >
+          <Users className="w-3 h-3" />
+          <span className="font-semibold">{comparisonInfo.canEnrollCount}/{comparisonInfo.total}</span>
         </div>
       )}
 
@@ -90,6 +106,12 @@ const SubjectCard = ({
 
       {/* Badges de habilitación */}
       <div className="flex flex-wrap gap-1 mt-2">
+        {comparisonInfo && comparisonInfo.allCanEnroll && (
+          <span className="text-xs px-2 py-0.5 bg-cyan-500/30 text-cyan-200 rounded-full flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            Grupo completo
+          </span>
+        )}
         {state === 0 && canEnroll && (
           <span className="text-xs px-2 py-0.5 bg-blue-500/30 text-blue-200 rounded-full">
             ✓ Habilitada cursar

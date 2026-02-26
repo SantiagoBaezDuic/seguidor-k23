@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { useSubjectsState } from './hooks/useSubjectsState';
 import { useScheduleState } from './hooks/useScheduleState';
+import { useComparisonState } from './hooks/useComparisonState';
 import { getAffectedSubjects } from './utils/correlations';
 import subjects from './data/subjects';
 
@@ -14,6 +15,7 @@ import CorrelationLines from './components/CorrelationLines';
 import TooltipLegend from './components/TooltipLegend';
 import CoursePlanner from './components/CoursePlanner';
 import WeeklySchedule from './components/WeeklySchedule';
+import ClassmateComparison from './components/ClassmateComparison';
 
 function App() {
   const {
@@ -43,6 +45,19 @@ function App() {
     hasConflictInCell,
     getSubjectsInCell
   } = useScheduleState();
+
+  // Hook para comparación con compañeros
+  const {
+    classmates,
+    commonSubjects,
+    compatibility,
+    error: comparisonError,
+    addClassmate,
+    updateClassmateName,
+    removeClassmate,
+    clearAll: clearComparison,
+    hasClassmates
+  } = useComparisonState(states);
 
   // Sincronizar horarios cuando cambian las materias seleccionadas
   useEffect(() => {
@@ -186,6 +201,19 @@ function App() {
         </div>
       </div>
 
+      {/* Comparación con Compañeros */}
+      <ClassmateComparison
+        userStates={states}
+        classmates={classmates}
+        commonSubjects={commonSubjects}
+        compatibility={compatibility}
+        error={comparisonError}
+        onAddClassmate={addClassmate}
+        onUpdateName={updateClassmateName}
+        onRemoveClassmate={removeClassmate}
+        onClearAll={clearComparison}
+      />
+
       {/* Main Content - Grid de Niveles */}
       <div className="w-full px-4 pb-8">
         <div 
@@ -213,6 +241,7 @@ function App() {
                   states={states}
                   onSubjectClick={handleSubjectClick}
                   highlightedIds={highlightedSubjects}
+                  comparisonData={hasClassmates ? { userStates: states, classmates } : null}
                 />
               );
             })}

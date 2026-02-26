@@ -1,5 +1,6 @@
 import React from 'react';
 import SubjectCard from './SubjectCard';
+import { getComparisonMatrix } from '../utils/compareProgress';
 
 /**
  * Componente para mostrar una columna de nivel con sus materias
@@ -9,7 +10,8 @@ const LevelColumn = ({
   subjects, 
   states, 
   onSubjectClick, 
-  highlightedIds = [] 
+  highlightedIds = [],
+  comparisonData = null // { userStates, classmates }
 }) => {
   const levelNames = {
     1: '1° Año',
@@ -33,17 +35,39 @@ const LevelColumn = ({
             No hay materias para mostrar
           </p>
         ) : (
-          subjects.map(subject => (
-            <SubjectCard
-              key={subject.id}
-              subject={subject}
-              state={states[subject.id] || 0}
-              canEnroll={subject.canEnroll}
-              canTakeExam={subject.canTakeExam}
-              isHighlighted={highlightedIds.includes(subject.id)}
-              onClick={() => onSubjectClick(subject.id)}
-            />
-          ))
+          subjects.map(subject => {
+            const subjectState = states[subject.id] || 0;
+            
+            // Calcular info de comparación solo si:
+            // 1. Hay compañeros cargados
+            // 2. La materia está PENDIENTE para el usuario (estado 0)
+            let comparisonInfo = null;
+            if (comparisonData && comparisonData.classmates.length > 0 && subjectState === 0) {
+              comparisonInfo = getComparisonMatrix(
+                subject.id,
+                comparisonData.userStates,
+                comparisonData.classmates
+              );
+              
+              // Si nadie puede cursarla (canEnrollCount === 0), no mostrar badge
+              if (comparisonInfo.canEnrollCount === 0) {
+                comparisonInfo = null;
+              }
+            }
+
+            return (
+              <SubjectCard
+                key={subject.id}
+                subject={subject}
+                state={subjectState}
+                canEnroll={subject.canEnroll}
+                canTakeExam={subject.canTakeExam}
+                isHighlighted={highlightedIds.includes(subject.id)}
+                comparisonInfo={comparisonInfo}
+                onClick={() => onSubjectClick(subject.id)}
+              />
+            );
+          })
         )}
       </div>
     </div>
