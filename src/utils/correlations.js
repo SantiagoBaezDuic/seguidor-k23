@@ -164,22 +164,47 @@ export const getAffectedSubjects = (subjectId, allSubjects = subjects) => {
  * @returns {Object} - Estadísticas {total, noCursadas, regulares, aprobadas, porcentaje}
  */
 export const calculateProgress = (states) => {
-  const total = subjects.length;
+  // Separar materias obligatorias y electivas
+  const obligatorias = subjects.filter(s => !s.isElective);
+  const electivas = subjects.filter(s => s.isElective);
+  
+  // Total requerido: 37 obligatorias + 7 electivas = 44 materias
+  const ELECTIVAS_REQUERIDAS = 7;
+  const totalRequerido = obligatorias.length + ELECTIVAS_REQUERIDAS;
+  
   let noCursadas = 0;
   let regulares = 0;
   let aprobadas = 0;
   
-  subjects.forEach(subject => {
+  // Contar obligatorias
+  obligatorias.forEach(subject => {
     const state = states[subject.id] || 0;
     if (state === 0) noCursadas++;
     else if (state === 1) regulares++;
     else if (state === 2) aprobadas++;
   });
   
-  const porcentaje = total > 0 ? Math.round((aprobadas / total) * 100) : 0;
+  // Contar electivas (máximo 7 cuentan para el progreso)
+  let electivasNoCursadas = 0;
+  let electivasRegulares = 0;
+  let electivasAprobadas = 0;
+  
+  electivas.forEach(subject => {
+    const state = states[subject.id] || 0;
+    if (state === 0) electivasNoCursadas++;
+    else if (state === 1) electivasRegulares++;
+    else if (state === 2) electivasAprobadas++;
+  });
+  
+  // Sumar electivas al total (limitando a 7)
+  noCursadas += Math.max(0, ELECTIVAS_REQUERIDAS - electivasRegulares - electivasAprobadas);
+  regulares += Math.min(electivasRegulares, ELECTIVAS_REQUERIDAS - electivasAprobadas);
+  aprobadas += Math.min(electivasAprobadas, ELECTIVAS_REQUERIDAS);
+  
+  const porcentaje = totalRequerido > 0 ? Math.round((aprobadas / totalRequerido) * 100) : 0;
   
   return {
-    total,
+    total: totalRequerido,
     noCursadas,
     regulares,
     aprobadas,
