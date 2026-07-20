@@ -41,6 +41,10 @@ const TooltipLegend = () => {
                   <span className="text-gray-300">No Cursada (click para cambiar)</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-sky-900 rounded border border-sky-500"></div>
+                  <span className="text-gray-300">Cursando (asistiendo actualmente)</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-yellow-900 rounded border border-yellow-500"></div>
                   <span className="text-gray-300">Regular (cursada aprobada)</span>
                 </div>
@@ -62,6 +66,10 @@ const TooltipLegend = () => {
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-blue-500/30 text-blue-200 text-[10px] rounded-full">✓ Habilitada cursar</span>
                   <span className="text-gray-300">Podés inscribirte</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-sky-500/30 text-sky-200 text-[10px] rounded-full">● Cursando</span>
+                  <span className="text-gray-300">La estás cursando actualmente</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-orange-500/30 text-orange-200 text-[10px] rounded-full">✓ Habilitada final</span>

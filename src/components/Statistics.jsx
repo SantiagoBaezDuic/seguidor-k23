@@ -20,10 +20,14 @@ const Statistics = ({ progress, intermediateProgress, intermediateCompleted }) =
           Progreso General
         </h3>
         
-        <div className="grid grid-cols-3 gap-2 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
           <div className="bg-gray-700/50 rounded p-2 text-center">
             <div className="text-gray-400 text-xs">No Cursadas</div>
             <div className="text-gray-300 font-bold">{progress.noCursadas}</div>
+          </div>
+          <div className="bg-sky-500/20 rounded p-2 text-center">
+            <div className="text-sky-300 text-xs">Cursando</div>
+            <div className="text-sky-100 font-bold">{progress.cursando}</div>
           </div>
           <div className="bg-yellow-500/20 rounded p-2 text-center">
             <div className="text-yellow-300 text-xs">Regulares</div>

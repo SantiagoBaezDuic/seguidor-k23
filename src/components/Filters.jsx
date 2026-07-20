@@ -8,6 +8,7 @@ const Filters = ({ activeFilters = [], onFilterChange, showElectives = true, onT
   const filterOptions = [
     { id: 'todas', label: 'Todas', color: 'gray' },
     { id: 'no-cursadas', label: 'No Cursadas', color: 'gray' },
+    { id: 'cursando', label: 'Cursando', color: 'sky' },
     { id: 'regulares', label: 'Regulares', color: 'yellow' },
     { id: 'aprobadas', label: 'Aprobadas', color: 'green' },
     { id: 'habilitadas-cursar', label: 'Habilitadas Cursar', color: 'blue' },
@@ -17,6 +18,7 @@ const Filters = ({ activeFilters = [], onFilterChange, showElectives = true, onT
   const getFilterStyles = (filter, isActive) => {
     const colorMap = {
       gray: isActive ? 'bg-gray-600 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600',
+      sky: isActive ? 'bg-sky-600 text-white' : 'bg-sky-500/20 text-sky-200 hover:bg-sky-500/30',
       yellow: isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-500/20 text-yellow-200 hover:bg-yellow-500/30',
       green: isActive ? 'bg-green-600 text-white' : 'bg-green-500/20 text-green-200 hover:bg-green-500/30',
       blue: isActive ? 'bg-blue-600 text-white' : 'bg-blue-500/20 text-blue-200 hover:bg-blue-500/30',

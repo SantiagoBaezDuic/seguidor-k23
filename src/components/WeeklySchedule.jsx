@@ -215,11 +215,20 @@ const WeeklySchedule = ({
               className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded 
                 text-gray-200 focus:border-blue-500 focus:outline-none"
             >
-              {TIME_SLOTS.filter(s => s.id > newSlot.startSlot).map(slot => (
-                <option key={slot.id} value={slot.id}>
-                  {slot.label} {slot.time.split('-')[1]}
-                </option>
-              ))}
+              {/* Los bloques son [startSlot, endSlot); value=19 permite cubrir hasta
+                  la última franja del día (id 18, 22:15-23:00). El label muestra la
+                  última franja incluida y su hora de fin. */}
+              {Array.from(
+                { length: 19 - newSlot.startSlot },
+                (_, i) => newSlot.startSlot + 1 + i
+              ).map(endValue => {
+                const lastIncludedSlot = TIME_SLOTS[endValue - 1];
+                return (
+                  <option key={endValue} value={endValue}>
+                    {lastIncludedSlot.label} {lastIncludedSlot.time.split('-')[1]}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

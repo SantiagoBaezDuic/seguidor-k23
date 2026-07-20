@@ -11,6 +11,7 @@ const ClassmateComparison = ({
   classmates,
   commonSubjects,
   compatibility,
+  showElectives = true,
   error,
   onAddClassmate,
   onUpdateName,
@@ -93,8 +94,9 @@ const ClassmateComparison = ({
   const getStateName = (state) => {
     switch (state) {
       case 0: return 'No cursada';
-      case 1: return 'Regular';
-      case 2: return 'Aprobada';
+      case 1: return 'Cursando';
+      case 2: return 'Regular';
+      case 3: return 'Aprobada';
       default: return 'Desconocido';
     }
   };
@@ -105,8 +107,9 @@ const ClassmateComparison = ({
   const getStateColor = (state) => {
     switch (state) {
       case 0: return 'text-gray-400';
-      case 1: return 'text-yellow-400';
-      case 2: return 'text-green-400';
+      case 1: return 'text-sky-400';
+      case 2: return 'text-yellow-400';
+      case 3: return 'text-green-400';
       default: return 'text-gray-500';
     }
   };
@@ -371,7 +374,7 @@ const ClassmateComparison = ({
                 
                 <div className="space-y-3">
                   {classmates.map(classmate => {
-                    const pairwiseCommon = findPairwiseCommonSubjects(userStates, classmate, commonSubjects);
+                    const pairwiseCommon = findPairwiseCommonSubjects(userStates, classmate, commonSubjects, showElectives);
                     const isExpanded = expandedClassmates.has(classmate.id);
                     
                     if (pairwiseCommon.length === 0) return null;

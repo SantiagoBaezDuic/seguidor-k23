@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
-import { 
-  findCommonEnrollableSubjects, 
+import {
+  findCommonEnrollableSubjects,
   calculateGroupCompatibility,
-  validateComparisonJSON 
+  validateComparisonJSON
 } from '../utils/compareProgress';
+import { isLegacyStatesPayload, migrateLegacyStates } from '../utils/stateMigration';
 
 /**
  * Hook para gestionar comparación de progreso con compañeros
  */
-export const useComparisonState = (userStates) => {
+export const useComparisonState = (userStates, showElectives = true) => {
   const [classmates, setClassmates] = useState([]);
   const [error, setError] = useState(null);
 
@@ -32,10 +33,11 @@ export const useComparisonState = (userStates) => {
       return false;
     }
 
-    // Generar nombre inicial desde el archivo
-    const baseName = fileName.replace(/\.json$/i, '').replace(/plan-k23-backup-/i, '');
+    // Preferir el nombre incluido en el archivo (versión >= 1.2); si no viene, derivarlo del nombre de archivo
+    const baseName = (jsonData.name && jsonData.name.trim())
+      || fileName.replace(/\.json$/i, '').replace(/plan-k23-backup-/i, '');
     let name = baseName || `Compañero ${classmates.length + 1}`;
-    
+
     // Evitar nombres duplicados
     let counter = 1;
     const originalName = name;
@@ -44,11 +46,16 @@ export const useComparisonState = (userStates) => {
       counter++;
     }
 
+    // Migrar estados si el archivo viene del esquema viejo (0=No cursada, 1=Regular, 2=Aprobada)
+    const states = isLegacyStatesPayload(jsonData.version)
+      ? migrateLegacyStates(jsonData.states)
+      : jsonData.states;
+
     // Crear nuevo compañero
     const newClassmate = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name,
-      states: jsonData.states,
+      states,
       timestamp: jsonData.timestamp || new Date().toISOString()
     };
 
@@ -90,15 +97,15 @@ export const useComparisonState = (userStates) => {
    */
   const commonSubjects = useMemo(() => {
     if (classmates.length === 0) return [];
-    return findCommonEnrollableSubjects(userStates, classmates);
-  }, [userStates, classmates]);
+    return findCommonEnrollableSubjects(userStates, classmates, showElectives);
+  }, [userStates, classmates, showElectives]);
 
   /**
    * Calcula compatibilidad del grupo (memoizado)
    */
   const compatibility = useMemo(() => {
-    return calculateGroupCompatibility(userStates, classmates);
-  }, [userStates, classmates]);
+    return calculateGroupCompatibility(userStates, classmates, showElectives);
+  }, [userStates, classmates, showElectives]);
 
   return {
     classmates,

@@ -18,8 +18,10 @@ export const useScheduleState = () => {
       return false;
     }
     
-    if (startSlot < 0 || startSlot > 18 || endSlot < 0 || endSlot > 18) {
-      console.error('Franja inválida (0-18)');
+    // Los bloques son semiabiertos [startSlot, endSlot): para cubrir la última
+    // franja del día (id 18) hace falta poder pasar endSlot=19
+    if (startSlot < 0 || startSlot > 18 || endSlot < 1 || endSlot > 19) {
+      console.error('Franja inválida (startSlot 0-18, endSlot 1-19)');
       return false;
     }
     
@@ -82,11 +84,19 @@ export const useScheduleState = () => {
    */
   const syncWithSelectedSubjects = (selectedSubjectIds) => {
     setSchedule(prev => {
+      const prevKeys = Object.keys(prev);
+      const selectedIdsSet = new Set(selectedSubjectIds);
+      const keysToKeep = prevKeys.filter(key => selectedIdsSet.has(parseInt(key)));
+
+      // Nada para podar: devolver la misma referencia para evitar un re-render
+      // (y un nuevo disparo de este efecto) sin cambios reales
+      if (keysToKeep.length === prevKeys.length) {
+        return prev;
+      }
+
       const filtered = {};
-      selectedSubjectIds.forEach(id => {
-        if (prev[id]) {
-          filtered[id] = prev[id];
-        }
+      keysToKeep.forEach(key => {
+        filtered[key] = prev[key];
       });
       return filtered;
     });

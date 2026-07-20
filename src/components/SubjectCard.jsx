@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle, Clock, CheckCircle, GraduationCap, Users } from 'lucide-react';
+import { Circle, BookOpen, Clock, CheckCircle, GraduationCap, Users } from 'lucide-react';
 import { correlatesToText } from '../utils/correlations';
 
 /**
@@ -19,9 +19,11 @@ const SubjectCard = ({
     switch (state) {
       case 0: // No cursada
         return 'bg-gray-700 border-gray-600 text-gray-300';
-      case 1: // Regular
+      case 1: // Cursando
+        return 'bg-sky-900 border-sky-500 text-sky-100';
+      case 2: // Regular
         return 'bg-yellow-900 border-yellow-500 text-yellow-100';
-      case 2: // Aprobada
+      case 3: // Aprobada
         return 'bg-green-900 border-green-500 text-green-100';
       default:
         return 'bg-gray-700 border-gray-600 text-gray-300';
@@ -34,8 +36,10 @@ const SubjectCard = ({
       case 0:
         return <Circle className="w-4 h-4" />;
       case 1:
-        return <Clock className="w-4 h-4" />;
+        return <BookOpen className="w-4 h-4" />;
       case 2:
+        return <Clock className="w-4 h-4" />;
+      case 3:
         return <CheckCircle className="w-4 h-4" />;
       default:
         return <Circle className="w-4 h-4" />;
@@ -123,7 +127,12 @@ const SubjectCard = ({
             ✓ Habilitada cursar
           </span>
         )}
-        {state === 1 && canTakeExam && (
+        {state === 1 && (
+          <span className="text-xs px-2 py-0.5 bg-sky-500/30 text-sky-200 rounded-full">
+            ● Cursando
+          </span>
+        )}
+        {state === 2 && canTakeExam && (
           <span className="text-xs px-2 py-0.5 bg-orange-500/30 text-orange-200 rounded-full">
             ✓ Habilitada final
           </span>

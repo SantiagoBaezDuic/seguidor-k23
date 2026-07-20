@@ -93,13 +93,13 @@ const evaluateCorrelatives = (correlatives, states, requiredState) => {
 export const canEnroll = (subjectId, states) => {
   const subject = subjects.find(s => s.id === subjectId);
   if (!subject) return false;
-  
-  // Verificar correlativas de cursada (deben estar Regular o Aprobadas - estado >= 1)
-  const rcOk = evaluateCorrelatives(subject.rc, states, 1);
-  
-  // Verificar correlativas de aprobación (deben estar Aprobadas - estado >= 2)
-  const raOk = evaluateCorrelatives(subject.ra, states, 2);
-  
+
+  // Verificar correlativas de cursada (deben estar Regular o Aprobadas - estado >= 2)
+  const rcOk = evaluateCorrelatives(subject.rc, states, 2);
+
+  // Verificar correlativas de aprobación (deben estar Aprobadas - estado >= 3)
+  const raOk = evaluateCorrelatives(subject.ra, states, 3);
+
   return rcOk && raOk;
 };
 
@@ -117,9 +117,9 @@ export const canTakeExam = (subjectId, states) => {
   if (!subject.ra) return true;
   if (Array.isArray(subject.ra) && subject.ra.length === 0) return true;
   if (typeof subject.ra === 'object' && !subject.ra.all && !subject.ra.any) return true;
-  
+
   // Verificar correlativas de aprobación usando evaluateCorrelatives
-  return evaluateCorrelatives(subject.ra, states, 2);
+  return evaluateCorrelatives(subject.ra, states, 3);
 };
 
 /**
@@ -128,20 +128,43 @@ export const canTakeExam = (subjectId, states) => {
  * @param {number} targetId - ID a buscar
  * @returns {boolean}
  */
-const includesInCorrelatives = (correlatives, targetId) => {
+export const includesInCorrelatives = (correlatives, targetId) => {
   if (!correlatives) return false;
-  
+
   if (Array.isArray(correlatives)) {
     return correlatives.includes(targetId);
   }
-  
+
   if (typeof correlatives === 'object') {
     const inAll = correlatives.all && correlatives.all.includes(targetId);
     const inAny = correlatives.any && correlatives.any.includes(targetId);
     return inAll || inAny;
   }
-  
+
   return false;
+};
+
+/**
+ * Aplana una estructura de correlativas (array legacy u objeto {all, any}) a un
+ * único array de IDs, sin duplicados. Útil para consumidores que solo necesitan
+ * "a qué materias apunta esta correlativa" sin importar la lógica AND/OR.
+ * @param {Array|Object} correlatives - Correlativas en formato legacy o nuevo
+ * @returns {Array<number>}
+ */
+export const getCorrelativeIds = (correlatives) => {
+  if (!correlatives) return [];
+
+  if (Array.isArray(correlatives)) {
+    return correlatives;
+  }
+
+  if (typeof correlatives === 'object') {
+    const all = correlatives.all || [];
+    const any = correlatives.any || [];
+    return [...new Set([...all, ...any])];
+  }
+
+  return [];
 };
 
 /**
@@ -161,51 +184,59 @@ export const getAffectedSubjects = (subjectId, allSubjects = subjects) => {
 /**
  * Calcula el progreso general de todas las materias
  * @param {Object} states - Objeto con estados de todas las materias
- * @returns {Object} - Estadísticas {total, noCursadas, regulares, aprobadas, porcentaje}
+ * @returns {Object} - Estadísticas {total, noCursadas, cursando, regulares, aprobadas, porcentaje}
  */
 export const calculateProgress = (states) => {
   // Separar materias obligatorias y electivas
   const obligatorias = subjects.filter(s => !s.isElective);
   const electivas = subjects.filter(s => s.isElective);
-  
+
   // Total requerido: 37 obligatorias + 7 electivas = 44 materias
   const ELECTIVAS_REQUERIDAS = 7;
   const totalRequerido = obligatorias.length + ELECTIVAS_REQUERIDAS;
-  
+
   let noCursadas = 0;
+  let cursando = 0;
   let regulares = 0;
   let aprobadas = 0;
-  
+
   // Contar obligatorias
   obligatorias.forEach(subject => {
     const state = states[subject.id] || 0;
     if (state === 0) noCursadas++;
-    else if (state === 1) regulares++;
-    else if (state === 2) aprobadas++;
+    else if (state === 1) cursando++;
+    else if (state === 2) regulares++;
+    else if (state === 3) aprobadas++;
   });
-  
+
   // Contar electivas (máximo 7 cuentan para el progreso)
-  let electivasNoCursadas = 0;
+  let electivasCursando = 0;
   let electivasRegulares = 0;
   let electivasAprobadas = 0;
-  
+
   electivas.forEach(subject => {
     const state = states[subject.id] || 0;
-    if (state === 0) electivasNoCursadas++;
-    else if (state === 1) electivasRegulares++;
-    else if (state === 2) electivasAprobadas++;
+    if (state === 1) electivasCursando++;
+    else if (state === 2) electivasRegulares++;
+    else if (state === 3) electivasAprobadas++;
   });
-  
-  // Sumar electivas al total (limitando a 7)
-  noCursadas += Math.max(0, ELECTIVAS_REQUERIDAS - electivasRegulares - electivasAprobadas);
-  regulares += Math.min(electivasRegulares, ELECTIVAS_REQUERIDAS - electivasAprobadas);
-  aprobadas += Math.min(electivasAprobadas, ELECTIVAS_REQUERIDAS);
-  
+
+  // Sumar electivas al total (limitando a 7), priorizando Aprobada > Regular > Cursando
+  const electivasAprobadasContadas = Math.min(electivasAprobadas, ELECTIVAS_REQUERIDAS);
+  const electivasRegularesContadas = Math.min(electivasRegulares, Math.max(0, ELECTIVAS_REQUERIDAS - electivasAprobadasContadas));
+  const electivasCursandoContadas = Math.min(electivasCursando, Math.max(0, ELECTIVAS_REQUERIDAS - electivasAprobadasContadas - electivasRegularesContadas));
+
+  noCursadas += Math.max(0, ELECTIVAS_REQUERIDAS - electivasAprobadasContadas - electivasRegularesContadas - electivasCursandoContadas);
+  cursando += electivasCursandoContadas;
+  regulares += electivasRegularesContadas;
+  aprobadas += electivasAprobadasContadas;
+
   const porcentaje = totalRequerido > 0 ? Math.round((aprobadas / totalRequerido) * 100) : 0;
-  
+
   return {
     total: totalRequerido,
     noCursadas,
+    cursando,
     regulares,
     aprobadas,
     porcentaje
@@ -219,10 +250,10 @@ export const calculateProgress = (states) => {
  */
 export const checkIntermediateTitle = (states) => {
   const intermediateSubjects = subjects.filter(s => s.it === true);
-  
+
   return intermediateSubjects.every(subject => {
     const state = states[subject.id] || 0;
-    return state === 2; // Debe estar aprobada
+    return state === 3; // Debe estar aprobada
   });
 };
 
@@ -237,7 +268,7 @@ export const calculateIntermediateProgress = (states) => {
   
   const completed = intermediateSubjects.filter(subject => {
     const state = states[subject.id] || 0;
-    return state === 2; // Solo cuentan las aprobadas
+    return state === 3; // Solo cuentan las aprobadas
   }).length;
   
   const porcentaje = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -257,4 +288,24 @@ export const calculateIntermediateProgress = (states) => {
  */
 export const getIntermediateSubjects = () => {
   return subjects.filter(s => s.it === true);
+};
+
+/**
+ * Obtiene las materias con final pendiente (Regular, cursada regularizada pero
+ * examen final no aprobado) junto con las materias que dependen de que se
+ * apruebe ese final para poder cursarse (lo tienen en su `ra`).
+ * @param {Object} states - Objeto con estados de todas las materias
+ * @param {Array} allSubjects - Universo de materias a considerar (permite excluir electivas ocultas)
+ * @returns {Array<{subject: Object, blocking: Array}>}
+ */
+export const getPendingFinals = (states, allSubjects = subjects) => {
+  return allSubjects
+    .filter(s => (states[s.id] || 0) === 2) // Regular
+    .map(s => ({
+      subject: s,
+      blocking: allSubjects.filter(other =>
+        (states[other.id] || 0) < 3 && // todavía no aprobada
+        includesInCorrelatives(other.ra, s.id) // requiere aprobar justo esta
+      )
+    }));
 };

@@ -2,9 +2,33 @@ import React, { useRef } from 'react';
 import { Download, Upload, RotateCcw } from 'lucide-react';
 
 /**
+ * Convierte un nombre libre en un slug apto para nombre de archivo
+ */
+// eslint-disable-next-line no-misleading-character-class
+const DIACRITICS_REGEX = /[̀-ͯ]/g;
+
+const slugify = (text) => {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD').replace(DIACRITICS_REGEX, '') // quitar acentos
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+/**
  * Componente para exportar e importar datos de progreso
  */
-const ExportImport = ({ currentStates, currentSchedule, onImport, onImportSchedule, onImportSelectedCourses, onReset }) => {
+const ExportImport = ({
+  currentStates,
+  currentSchedule,
+  currentSelectedCourses,
+  userName,
+  onImport,
+  onImportSchedule,
+  onImportSelectedCourses,
+  onReset
+}) => {
   const fileInputRef = useRef(null);
 
   /**
@@ -12,17 +36,23 @@ const ExportImport = ({ currentStates, currentSchedule, onImport, onImportSchedu
    */
   const handleExport = () => {
     const data = {
-      version: '1.1',
+      version: '1.2',
       timestamp: new Date().toISOString(),
+      name: userName || '',
       states: currentStates,
-      schedule: currentSchedule || {}
+      schedule: currentSchedule || {},
+      selectedCourses: currentSelectedCourses || []
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `plan-k23-backup-${new Date().toISOString().split('T')[0]}.json`;
+    const nameSlug = userName ? slugify(userName) : '';
+    const fileName = nameSlug
+      ? `plan-k23-backup-${nameSlug}-${new Date().toISOString().split('T')[0]}.json`
+      : `plan-k23-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -54,18 +84,29 @@ const ExportImport = ({ currentStates, currentSchedule, onImport, onImportSchedu
         );
 
         if (confirmation) {
-          onImport(data.states);
-          
+          onImport(data.states, data.version);
+
           // Importar horarios si existen (compatibilidad con versiones antiguas)
           if (data.schedule && typeof data.schedule === 'object' && onImportSchedule) {
             onImportSchedule(data.schedule);
-            
-            // Sincronizar materias seleccionadas con el schedule importado
-            if (onImportSelectedCourses) {
-              onImportSelectedCourses(data.schedule);
+          }
+
+          // Restaurar materias seleccionadas: preferir el campo dedicado (>= v1.2);
+          // si no viene, derivarlas de las keys del schedule (backups viejos)
+          if (onImportSelectedCourses) {
+            const idsFromSelectedCourses = Array.isArray(data.selectedCourses)
+              ? data.selectedCourses
+              : null;
+            const idsFromSchedule = data.schedule && typeof data.schedule === 'object'
+              ? Object.keys(data.schedule).map(id => parseInt(id))
+              : null;
+            const idsToApply = idsFromSelectedCourses || idsFromSchedule;
+
+            if (idsToApply) {
+              onImportSelectedCourses(idsToApply);
             }
           }
-          
+
           alert('Datos importados correctamente');
         }
       } catch (error) {
@@ -75,7 +116,7 @@ const ExportImport = ({ currentStates, currentSchedule, onImport, onImportSchedu
     };
 
     reader.readAsText(file);
-    
+
     // Reset input para permitir importar el mismo archivo nuevamente
     event.target.value = '';
   };

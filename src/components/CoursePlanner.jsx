@@ -5,10 +5,23 @@ import { Clock, BookOpen, Calendar, AlertTriangle } from 'lucide-react';
  * Componente para planificar qué materias cursar
  * Muestra materias disponibles y calcula carga horaria total
  */
-const CoursePlanner = ({ availableSubjects, selectedSubjects, onSelectionChange }) => {
-  // Calcular carga horaria total
+const CoursePlanner = ({ availableSubjects, selectedSubjects, selectedSubjectsData = [], onSelectionChange }) => {
+  // Materias a mostrar: las disponibles para cursar + las ya seleccionadas
+  // aunque hayan cambiado de estado (ej. marcadas como Cursando) y ya no
+  // figuren entre las "disponibles"
+  const displaySubjects = [
+    ...availableSubjects,
+    ...selectedSubjectsData.filter(
+      s => s.state !== 0 && !availableSubjects.some(a => a.id === s.id)
+    )
+  ];
+
+  // Calcular carga horaria total a partir de los datos completos de cada materia
+  // seleccionada (no solo de las "disponibles", que dejan de incluir una materia
+  // en cuanto deja de estar en estado 0)
   const totalHours = selectedSubjects.reduce((sum, subjectId) => {
-    const subject = availableSubjects.find(s => s.id === subjectId);
+    const subject = selectedSubjectsData.find(s => s.id === subjectId)
+      || availableSubjects.find(s => s.id === subjectId);
     return sum + (subject?.h || 0);
   }, 0);
 
@@ -47,7 +60,7 @@ const CoursePlanner = ({ availableSubjects, selectedSubjects, onSelectionChange 
     return colors[level] || colors[1];
   };
 
-  if (availableSubjects.length === 0) {
+  if (displaySubjects.length === 0) {
     return (
       <div className="bg-gray-800/30 rounded-lg p-8 text-center">
         <BookOpen className="w-12 h-12 mx-auto text-gray-600 mb-4" />
@@ -109,11 +122,12 @@ const CoursePlanner = ({ availableSubjects, selectedSubjects, onSelectionChange 
           <BookOpen className="w-5 h-5" />
           Materias disponibles ({availableSubjects.length})
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {availableSubjects.map(subject => {
+          {displaySubjects.map(subject => {
             const isSelected = selectedSubjects.includes(subject.id);
-            
+            const stateLabel = subject.state === 1 ? 'Cursando' : subject.state === 2 ? 'Regular' : subject.state === 3 ? 'Aprobada' : null;
+
             return (
               <label
                 key={subject.id}
@@ -164,6 +178,13 @@ const CoursePlanner = ({ availableSubjects, selectedSubjects, onSelectionChange 
                     {subject.it && (
                       <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-semibold">
                         TI
+                      </span>
+                    )}
+
+                    {/* Badge de estado (si ya no figura entre las "disponibles") */}
+                    {stateLabel && (
+                      <span className="px-2 py-0.5 rounded-full bg-sky-600/30 text-sky-200 font-medium">
+                        {stateLabel}
                       </span>
                     )}
                   </div>

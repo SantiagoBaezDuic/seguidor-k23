@@ -4,7 +4,7 @@ import { useSubjectsState } from './hooks/useSubjectsState';
 import { useScheduleState } from './hooks/useScheduleState';
 import { useComparisonState } from './hooks/useComparisonState';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { getAffectedSubjects } from './utils/correlations';
+import { getAffectedSubjects, getCorrelativeIds } from './utils/correlations';
 import subjects from './data/subjects';
 
 // Components
@@ -17,8 +17,11 @@ import TooltipLegend from './components/TooltipLegend';
 import CoursePlanner from './components/CoursePlanner';
 import WeeklySchedule from './components/WeeklySchedule';
 import ClassmateComparison from './components/ClassmateComparison';
+import PendingFinals from './components/PendingFinals';
 
 function App() {
+  const [showElectives, setShowElectives] = useLocalStorage('isi-show-electives', true);
+
   const {
     states,
     toggleSubjectState,
@@ -27,14 +30,15 @@ function App() {
     progress,
     intermediateProgress,
     intermediateCompleted,
-    subjectsWithStatus
-  } = useSubjectsState();
+    subjectsWithStatus,
+    pendingFinals
+  } = useSubjectsState(showElectives);
 
   const [highlightedSubjects, setHighlightedSubjects] = useState([]);
   const [highlightedForLines, setHighlightedForLines] = useState(null);
   const [activeFilters, setActiveFilters] = useState(['todas']);
-  const [selectedCourses, setSelectedCourses] = useState([]);
-  const [showElectives, setShowElectives] = useLocalStorage('isi-show-electives', true);
+  const [selectedCourses, setSelectedCourses] = useLocalStorage('isi-tracker-selected-courses', []);
+  const [userName, setUserName] = useLocalStorage('isi-tracker-username', '');
   const containerRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
 
@@ -60,45 +64,21 @@ function App() {
     removeClassmate,
     clearAll: clearComparison,
     hasClassmates
-  } = useComparisonState(states);
+  } = useComparisonState(states, showElectives);
 
-  // Sincronizar horarios cuando cambian las materias seleccionadas
+  // Podar del horario las materias que el usuario deselecciona en el planificador
   useEffect(() => {
     syncWithSelectedSubjects(selectedCourses);
   }, [selectedCourses, syncWithSelectedSubjects]);
 
-  // Sincronizar selectedCourses con materias que tienen horarios al cargar inicialmente
-  useEffect(() => {
-    // Solo sincronizar si selectedCourses está vacío (carga inicial)
-    if (selectedCourses.length === 0 && schedule && Object.keys(schedule).length > 0) {
-      const scheduledSubjectIds = Object.keys(schedule).map(id => parseInt(id));
-      
-      // Filtrar solo las materias que existen en subjectsWithStatus
-      const validScheduledIds = scheduledSubjectIds.filter(id =>
-        subjectsWithStatus.some(s => s.id === id)
-      );
-      
-      if (validScheduledIds.length > 0) {
-        setSelectedCourses(validScheduledIds);
-      }
-    }
-  }, [schedule, subjectsWithStatus, selectedCourses.length]);
-
   /**
-   * Sincroniza selectedCourses con el schedule importado
+   * Aplica una lista de IDs de materias seleccionadas (ej. tras importar un backup)
    */
-  const syncSelectedCoursesFromSchedule = (importedSchedule) => {
-    if (importedSchedule && Object.keys(importedSchedule).length > 0) {
-      const scheduledSubjectIds = Object.keys(importedSchedule).map(id => parseInt(id));
-      
-      // Filtrar solo las materias que existen en subjectsWithStatus
-      const validScheduledIds = scheduledSubjectIds.filter(id =>
-        subjectsWithStatus.some(s => s.id === id)
-      );
-      
-      if (validScheduledIds.length > 0) {
-        setSelectedCourses(validScheduledIds);
-      }
+  const applyImportedSelectedCourses = (courseIds) => {
+    if (!courseIds || courseIds.length === 0) return;
+    const validIds = courseIds.filter(id => subjects.some(s => s.id === id));
+    if (validIds.length > 0) {
+      setSelectedCourses(validIds);
     }
   };
 
@@ -117,22 +97,18 @@ function App() {
     
     // Si la materia está bloqueada (no cursada y no habilitada), solo resaltar requisitos pendientes
     if (currentState === 0 && subject && !subject.canEnroll) {
-      // Encontrar requisitos pendientes (los que no están en estado 1 o 2)
+      // Encontrar requisitos pendientes (los que no llegaron al estado mínimo requerido)
       const pendingReqs = [];
-      
-      if (subject.rc) {
-        subject.rc.forEach(reqId => {
-          const reqState = states[reqId] || 0;
-          if (reqState === 0) pendingReqs.push(reqId);
-        });
-      }
-      
-      if (subject.ra) {
-        subject.ra.forEach(reqId => {
-          const reqState = states[reqId] || 0;
-          if (reqState < 2) pendingReqs.push(reqId);
-        });
-      }
+
+      getCorrelativeIds(subject.rc).forEach(reqId => {
+        const reqState = states[reqId] || 0;
+        if (reqState < 2) pendingReqs.push(reqId); // rc requiere Regular o Aprobada
+      });
+
+      getCorrelativeIds(subject.ra).forEach(reqId => {
+        const reqState = states[reqId] || 0;
+        if (reqState < 3) pendingReqs.push(reqId); // ra requiere Aprobada
+      });
       
       // Solo resaltar la materia y sus requisitos pendientes SIN cambiar estado
       setHighlightedSubjects([subjectId, ...pendingReqs]);
@@ -140,6 +116,13 @@ function App() {
     } else {
       // Materia no bloqueada: hacer toggle normal
       toggleSubjectState(subjectId);
+
+      // Si la materia pasa a "Cursando", seleccionarla automáticamente en el
+      // Planificador de Cursada (dejó de ser solo una materia habilitada: ya se está cursando)
+      const newState = (currentState + 1) % 4;
+      if (newState === 1) {
+        setSelectedCourses(prev => prev.includes(subjectId) ? prev : [...prev, subjectId]);
+      }
 
       // Calcular materias afectadas y resaltar
       const affected = getAffectedSubjects(subjectId, subjects);
@@ -167,8 +150,9 @@ function App() {
     return subjectsList.filter(subject => {
       // Filtro por estado
       if (activeFilters.includes('no-cursadas') && subject.state === 0) return true;
-      if (activeFilters.includes('regulares') && subject.state === 1) return true;
-      if (activeFilters.includes('aprobadas') && subject.state === 2) return true;
+      if (activeFilters.includes('cursando') && subject.state === 1) return true;
+      if (activeFilters.includes('regulares') && subject.state === 2) return true;
+      if (activeFilters.includes('aprobadas') && subject.state === 3) return true;
       
       // Filtro por habilitación
       if (activeFilters.includes('habilitadas-cursar') && subject.state === 0 && subject.canEnroll) return true;
@@ -211,14 +195,29 @@ function App() {
     <div className="min-h-screen bg-gray-950 text-gray-100">
       {/* Header */}
       <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex-1">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl md:text-3xl font-bold text-center text-blue-400">
               Plan de Estudios K23 - UTN FRBA
             </h1>
             <p className="text-center text-gray-400 text-sm mt-1">
               Ingeniería en Sistemas de Información
             </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <label htmlFor="user-name" className="text-xs text-gray-400 whitespace-nowrap hidden sm:inline">
+              Tu nombre
+            </label>
+            <input
+              id="user-name"
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Tu nombre"
+              maxLength={40}
+              className="w-28 sm:w-36 px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded
+                text-gray-200 placeholder:text-gray-500 focus:outline-none focus:border-blue-500"
+            />
           </div>
           <TooltipLegend />
         </div>
@@ -241,13 +240,18 @@ function App() {
           <ExportImport
             currentStates={states}
             currentSchedule={schedule}
+            currentSelectedCourses={selectedCourses}
+            userName={userName}
             onImport={importStates}
             onImportSchedule={setSchedule}
-            onImportSelectedCourses={syncSelectedCoursesFromSchedule}
+            onImportSelectedCourses={applyImportedSelectedCourses}
             onReset={resetStates}
           />
         </div>
       </div>
+
+      {/* Finales Pendientes */}
+      <PendingFinals pendingFinals={pendingFinals} />
 
       {/* Comparación con Compañeros */}
       <ClassmateComparison
@@ -255,6 +259,7 @@ function App() {
         classmates={classmates}
         commonSubjects={commonSubjects}
         compatibility={compatibility}
+        showElectives={showElectives}
         error={comparisonError}
         onAddClassmate={addClassmate}
         onUpdateName={updateClassmateName}
@@ -323,6 +328,7 @@ function App() {
         <CoursePlanner
           availableSubjects={availableSubjects}
           selectedSubjects={selectedCourses}
+          selectedSubjectsData={selectedSubjectsData}
           onSelectionChange={setSelectedCourses}
         />
 

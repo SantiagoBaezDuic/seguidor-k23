@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import subjects from '../data/subjects';
+import { getCorrelativeIds } from '../utils/correlations';
 
 /**
  * Componente para dibujar líneas SVG permanentes entre materias y sus correlativas
@@ -55,7 +56,7 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
         };
 
         // Líneas de correlativas de cursada (rc)
-        subject.rc.forEach(reqId => {
+        getCorrelativeIds(subject.rc).forEach(reqId => {
           const reqElement = container.querySelector(`[data-subject-id="${reqId}"]`);
           if (reqElement) {
             const reqRect = reqElement.getBoundingClientRect();
@@ -79,7 +80,7 @@ const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjects
         });
 
         // Líneas de correlativas de aprobación (ra)
-        subject.ra.forEach(reqId => {
+        getCorrelativeIds(subject.ra).forEach(reqId => {
           const reqElement = container.querySelector(`[data-subject-id="${reqId}"]`);
           if (reqElement) {
             const reqRect = reqElement.getBoundingClientRect();
