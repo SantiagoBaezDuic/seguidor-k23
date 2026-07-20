@@ -268,10 +268,10 @@ function App() {
       />
 
       {/* Main Content - Grid de Niveles */}
-      <div className="w-full px-4 pb-8">
-        <div 
+      <div className="w-full px-4 pb-8 space-y-6">
+        <div
           ref={containerRef}
-          className={`relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto overflow-y-auto ${showElectives ? 'max-h-[600px]' : 'max-h-[800px]'}`}
+          className="relative bg-gray-900/50 rounded-lg p-8 overflow-x-auto overflow-y-auto max-h-[800px]"
         >
           {/* Líneas de correlatividades */}
           <CorrelationLines
@@ -279,17 +279,16 @@ function App() {
             containerRef={containerRef}
             states={states}
             subjectsWithStatus={subjectsWithStatus}
-            showElectives={showElectives}
           />
 
           {/* Grid horizontal de niveles */}
-          <div 
+          <div
             className="flex gap-10 w-max"
             data-grid="levels"
           >
             {[1, 2, 3, 4, 5].map(level => {
               const levelSubjects = getSubjectsByLevel(level);
-              
+
               return (
                 <LevelColumn
                   key={level}
@@ -302,21 +301,24 @@ function App() {
                 />
               );
             })}
-            
-            {/* Electivas (nivel 6) - Condicional */}
-            {showElectives && (
-              <LevelColumn
-                key={6}
-                level={6}
-                subjects={getSubjectsByLevel(6)}
-                states={states}
-                onSubjectClick={handleSubjectClick}
-                highlightedIds={highlightedSubjects}
-                comparisonData={hasClassmates ? { userStates: states, classmates } : null}
-              />
-            )}
           </div>
         </div>
+
+        {/* Electivas: sección propia (grilla compacta) en vez de una columna más
+            del grid de correlativas, para no inflar su alto con 19 materias */}
+        {showElectives && (
+          <div className="relative bg-gray-900/50 rounded-lg p-8">
+            <LevelColumn
+              level={6}
+              subjects={getSubjectsByLevel(6)}
+              states={states}
+              onSubjectClick={handleSubjectClick}
+              highlightedIds={highlightedSubjects}
+              comparisonData={hasClassmates ? { userStates: states, classmates } : null}
+              layout="grid"
+            />
+          </div>
+        )}
       </div>
 
       {/* Planificador de Cursada */}

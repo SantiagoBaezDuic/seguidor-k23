@@ -5,13 +5,14 @@ import { getComparisonMatrix } from '../utils/compareProgress';
 /**
  * Componente para mostrar una columna de nivel con sus materias
  */
-const LevelColumn = ({ 
-  level, 
-  subjects, 
-  states, 
-  onSubjectClick, 
+const LevelColumn = ({
+  level,
+  subjects,
+  states,
+  onSubjectClick,
   highlightedIds = [],
-  comparisonData = null // { userStates, classmates }
+  comparisonData = null, // { userStates, classmates }
+  layout = 'column' // 'column' (una tira vertical dentro del grid horizontal) o 'grid' (grilla compacta multi-columna, para secciones independientes como Electivas)
 }) => {
   const levelNames = {
     1: '1° Año',
@@ -22,15 +23,23 @@ const LevelColumn = ({
     6: 'Electivas (3°/4°)'
   };
 
+  const wrapperClass = layout === 'grid'
+    ? 'w-full relative z-10'
+    : 'flex-shrink-0 w-96 p-6 relative z-10';
+
+  const listClass = layout === 'grid'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+    : 'flex flex-col gap-5';
+
   return (
-    <div className="flex-shrink-0 w-96 p-6 relative z-10">
+    <div className={wrapperClass}>
       {/* Header del nivel */}
       <h2 className="text-xl font-semibold text-center mb-6 text-blue-400/90">
         {levelNames[level]}
       </h2>
 
       {/* Materias del nivel */}
-      <div className="flex flex-col gap-5">
+      <div className={listClass}>
         {subjects.length === 0 ? (
           <p className="text-gray-500 text-center text-sm italic">
             No hay materias para mostrar
