@@ -1,254 +1,284 @@
-import React, { useEffect, useState, useRef } from 'react';
-import subjects from '../data/subjects';
+import React, { useLayoutEffect, useEffect, useState, useMemo, useCallback } from 'react';
 import { getCorrelativeIds } from '../utils/correlations';
 
+// Colores de las líneas (deben coincidir con la leyenda)
+export const LINE_COLORS = {
+  cursada: '#60a5fa',     // blue-400: falta regularizar
+  aprobacion: '#fb923c',  // orange-400: falta aprobar el final
+  cumplida: '#34d399'     // emerald-400: requisito ya cumplido
+};
+
 /**
- * Componente para dibujar líneas SVG permanentes entre materias y sus correlativas
+ * Construye todas las aristas de correlatividad del plan (sin electivas).
+ * Si una materia figura como correlativa de cursada y de aprobación a la vez,
+ * se conserva solo la de aprobación (el requisito más fuerte).
+ * @returns {Array<{from:number,to:number,type:'cursada'|'aprobacion',satisfied:boolean}>}
  */
-const CorrelationLines = ({ highlightedSubjectId, containerRef, states, subjectsWithStatus, showElectives }) => {
-  const [allLines, setAllLines] = useState([]);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const updateTimeoutRef = useRef(null);
+const buildEdges = (subjectsWithStatus, states) => {
+  const edges = new Map();
 
-  // Reset dimensiones inmediatamente cuando cambia showElectives
-  useEffect(() => {
-    setDimensions({ width: 0, height: 0 });
-  }, [showElectives]);
+  subjectsWithStatus.forEach(subject => {
+    if (subject.hideCorrelations || subject.isElective) return;
 
-  // Calcular todas las líneas de correlatividad
-  useEffect(() => {
-    if (!containerRef.current) {
-      return;
-    }
-
-    const updateLines = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const newLines = [];
-
-      // Actualizar dimensiones del SVG basadas en scrollWidth/scrollHeight
-      // (necesario para que coincida con el sistema de coordenadas de las líneas)
-      setDimensions({
-        width: container.scrollWidth,
-        height: container.scrollHeight
+    getCorrelativeIds(subject.rc).forEach(reqId => {
+      edges.set(`${reqId}-${subject.id}`, {
+        from: reqId,
+        to: subject.id,
+        type: 'cursada',
+        satisfied: (states[reqId] || 0) >= 2
       });
+    });
 
-      // Para cada materia, dibujar líneas a sus correlativas
-      // Solo mostrar líneas que llegan a materias NO CURSADAS y NO HABILITADAS
-      subjectsWithStatus.forEach(subject => {
-        // Saltar materias con correlaciones ocultas (ej: electivas)
-        if (subject.hideCorrelations || subject.isElective) return;
-        
-        // Filtrar: solo dibujar líneas si la materia destino no está cursada Y no está habilitada
-        const subjectState = states[subject.id] || 0;
-        if (subjectState !== 0) return; // Saltar materias regulares o aprobadas
-        if (subject.canEnroll) return; // Saltar materias ya habilitadas para cursar
-
-        const subjectElement = container.querySelector(`[data-subject-id="${subject.id}"]`);
-        if (!subjectElement) return;
-
-        const subjectRect = subjectElement.getBoundingClientRect();
-        const subjectLeft = {
-          x: subjectRect.left - containerRect.left + container.scrollLeft,
-          y: subjectRect.top + subjectRect.height / 2 - containerRect.top + container.scrollTop
-        };
-
-        // Líneas de correlativas de cursada (rc)
-        getCorrelativeIds(subject.rc).forEach(reqId => {
-          const reqElement = container.querySelector(`[data-subject-id="${reqId}"]`);
-          if (reqElement) {
-            const reqRect = reqElement.getBoundingClientRect();
-            const reqRight = {
-              x: reqRect.right - containerRect.left + container.scrollLeft,
-              y: reqRect.top + reqRect.height / 2 - containerRect.top + container.scrollTop
-            };
-
-            newLines.push({
-              id: `${reqId}-${subject.id}-rc`,
-              x1: reqRight.x,
-              y1: reqRight.y,
-              x2: subjectLeft.x,
-              y2: subjectLeft.y,
-              type: 'cursada',
-              fromId: reqId,
-              toId: subject.id,
-              isHighlighted: highlightedSubjectId === subject.id || highlightedSubjectId === reqId
-            });
-          }
-        });
-
-        // Líneas de correlativas de aprobación (ra)
-        getCorrelativeIds(subject.ra).forEach(reqId => {
-          const reqElement = container.querySelector(`[data-subject-id="${reqId}"]`);
-          if (reqElement) {
-            const reqRect = reqElement.getBoundingClientRect();
-            const reqRight = {
-              x: reqRect.right - containerRect.left + container.scrollLeft,
-              y: reqRect.top + reqRect.height / 2 - containerRect.top + container.scrollTop
-            };
-
-            newLines.push({
-              id: `${reqId}-${subject.id}-ra`,
-              x1: reqRight.x,
-              y1: reqRight.y,
-              x2: subjectLeft.x,
-              y2: subjectLeft.y,
-              type: 'aprobacion',
-              fromId: reqId,
-              toId: subject.id,
-              isHighlighted: highlightedSubjectId === subject.id || highlightedSubjectId === reqId
-            });
-          }
-        });
+    getCorrelativeIds(subject.ra).forEach(reqId => {
+      edges.set(`${reqId}-${subject.id}`, {
+        from: reqId,
+        to: subject.id,
+        type: 'aprobacion',
+        satisfied: (states[reqId] || 0) >= 3
       });
+    });
+  });
 
-      setAllLines(newLines);
-    };
+  return [...edges.values()];
+};
 
-    // Delay para dar tiempo a que el DOM se renderice
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    updateTimeoutRef.current = setTimeout(() => {
-      // RequestAnimationFrame adicional para asegurar que el layout se completó
-      requestAnimationFrame(() => {
-        requestAnimationFrame(updateLines);
-      });
-    }, 100);
+/**
+ * Distribuye los extremos de varias líneas a lo largo del borde de una tarjeta,
+ * ordenados por la altura del otro extremo, para que no converjan en un único punto.
+ */
+const assignPorts = (edges, rects, side) => {
+  const groups = new Map();
+  edges.forEach(edge => {
+    const own = side === 'in' ? edge.to : edge.from;
+    if (!groups.has(own)) groups.set(own, []);
+    groups.get(own).push(edge);
+  });
 
-    // Actualizar líneas cuando se hace scroll
-    const handleScroll = () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
+  const ports = new Map();
+  groups.forEach((group, ownId) => {
+    const rect = rects[ownId];
+    const otherY = (edge) => rects[side === 'in' ? edge.from : edge.to].cy;
+    group.sort((a, b) => otherY(a) - otherY(b));
+
+    // Usar la franja central (60%) del alto de la tarjeta
+    const span = rect.height * 0.6;
+    const start = rect.cy - span / 2;
+    group.forEach((edge, i) => {
+      const y = group.length === 1 ? rect.cy : start + (span * i) / (group.length - 1);
+      ports.set(`${edge.from}-${edge.to}`, y);
+    });
+  });
+
+  return ports;
+};
+
+/**
+ * Agrupa las tarjetas medidas en columnas (misma coordenada x) y calcula, para
+ * cada columna, los huecos verticales entre tarjetas por donde puede cruzar una línea.
+ * @returns {Array<{left:number,right:number,gaps:number[]}>}
+ */
+const buildColumns = (rects) => {
+  const byLeft = new Map();
+  Object.values(rects).forEach(rect => {
+    if (!byLeft.has(rect.left)) byLeft.set(rect.left, []);
+    byLeft.get(rect.left).push(rect);
+  });
+
+  return [...byLeft.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([left, cards]) => {
+      cards.sort((a, b) => a.top - b.top);
+      const gaps = [cards[0].top - 10];
+      for (let i = 0; i < cards.length - 1; i++) {
+        gaps.push((cards[i].top + cards[i].height + cards[i + 1].top) / 2);
       }
-      updateTimeoutRef.current = setTimeout(updateLines, 100);
-    };
+      const last = cards[cards.length - 1];
+      gaps.push(last.top + last.height + 10);
+      return { left, right: left + (cards[0].right - cards[0].left), gaps };
+    });
+};
 
-    const container = containerRef.current;
-    container.addEventListener('scroll', handleScroll);
+/**
+ * Curva S horizontal entre dos puntos (tangentes horizontales en los extremos)
+ */
+const sCurve = (a, b) => {
+  const offset = Math.max(24, (b.x - a.x) * 0.5);
+  return `C ${a.x + offset} ${a.y}, ${b.x - offset} ${b.y}, ${b.x} ${b.y}`;
+};
 
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [containerRef, highlightedSubjectId, states, subjectsWithStatus, showElectives]);
+/**
+ * Path de una correlativa. Si salta columnas, cruza cada columna intermedia por
+ * el hueco entre tarjetas más cercano a su trayectoria, en lugar de pasar por
+ * detrás de materias que no tienen nada que ver.
+ */
+const routePath = (x1, y1, x2, y2, columns) => {
+  const between = columns.filter(col => col.left > x1 && col.right < x2);
+  const points = [{ x: x1, y: y1 }];
+
+  between.forEach(col => {
+    const t = ((col.left + col.right) / 2 - x1) / (x2 - x1);
+    const idealY = y1 + (y2 - y1) * t;
+    const gapY = col.gaps.reduce((best, g) => (Math.abs(g - idealY) < Math.abs(best - idealY) ? g : best));
+    points.push({ x: col.left - 6, y: gapY, enter: true });
+    points.push({ x: col.right + 6, y: gapY });
+  });
+  points.push({ x: x2, y: y2 });
+
+  let d = `M ${x1} ${y1}`;
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i];
+    // Dentro de una columna intermedia: tramo recto por el hueco
+    d += p.enter === undefined && points[i - 1].enter ? ` L ${p.x} ${p.y}` : ` ${sCurve(points[i - 1], p)}`;
+  }
+  return d;
+};
+
+/**
+ * Líneas SVG de correlatividades entre materias.
+ *
+ * - Con una materia enfocada (hover/foco/click): muestra todas sus correlativas
+ *   (entrantes) y las materias que habilita (salientes), coloreadas según si el
+ *   requisito ya está cumplido.
+ * - Sin foco y con `showNetwork`: muestra, tenues, solo los requisitos que hoy
+ *   bloquean materias no cursadas.
+ */
+const CorrelationLines = ({ containerRef, states, subjectsWithStatus, focusId = null, showNetwork = false }) => {
+  const [layout, setLayout] = useState({ rects: {}, width: 0, height: 0 });
 
   /**
-   * Genera un path SVG con curva bezier
+   * Mide la posición de cada tarjeta en coordenadas del contenido scrolleable
+   * (independiente del scroll actual). Solo actualiza el estado si algo cambió.
    */
-  const generateCurvePath = (x1, y1, x2, y2) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    
-    // Control points para una curva suave
-    const cx1 = x1 + dx * 0.5;
-    const cy1 = y1;
-    const cx2 = x1 + dx * 0.5;
-    const cy2 = y2;
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-    return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
-  };
+    const containerRect = container.getBoundingClientRect();
+    const rects = {};
+    container.querySelectorAll('[data-subject-id]').forEach(el => {
+      const r = el.getBoundingClientRect();
+      const left = Math.round(r.left - containerRect.left + container.scrollLeft);
+      const top = Math.round(r.top - containerRect.top + container.scrollTop);
+      rects[el.dataset.subjectId] = {
+        left,
+        right: left + Math.round(r.width),
+        top,
+        height: Math.round(r.height),
+        cy: top + Math.round(r.height) / 2
+      };
+    });
 
-  if (allLines.length === 0 || dimensions.width === 0) return null;
+    const next = { rects, width: container.scrollWidth, height: container.scrollHeight };
+    setLayout(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  }, [containerRef]);
+
+  // Re-medir después de cada render (filtros, estados y búsqueda cambian el layout)
+  useLayoutEffect(() => {
+    measure();
+  });
+
+  // Re-medir ante cambios de tamaño que no pasan por React (ventana, fuentes)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(container);
+    if (container.firstElementChild) observer.observe(container.firstElementChild);
+    return () => observer.disconnect();
+  }, [containerRef, measure]);
+
+  const allEdges = useMemo(
+    () => buildEdges(subjectsWithStatus, states),
+    [subjectsWithStatus, states]
+  );
+
+  const lines = useMemo(() => {
+    const { rects } = layout;
+    const statusById = new Map(subjectsWithStatus.map(s => [s.id, s]));
+
+    let visible;
+    if (focusId !== null) {
+      visible = allEdges.filter(e => e.from === focusId || e.to === focusId);
+    } else if (showNetwork) {
+      // Solo los requisitos pendientes de materias que hoy están bloqueadas
+      visible = allEdges.filter(e => {
+        const target = statusById.get(e.to);
+        return target && target.state === 0 && !target.canEnroll && !e.satisfied;
+      });
+    } else {
+      visible = [];
+    }
+
+    visible = visible.filter(e => rects[e.from] && rects[e.to] && rects[e.from].right < rects[e.to].left);
+
+    const inPorts = assignPorts(visible, rects, 'in');
+    const outPorts = assignPorts(visible, rects, 'out');
+    const columns = buildColumns(rects);
+
+    return visible.map(edge => {
+      const key = `${edge.from}-${edge.to}`;
+      const x1 = rects[edge.from].right;
+      const y1 = outPorts.get(key);
+      const x2 = rects[edge.to].left - 2; // dejar lugar a la punta de flecha
+      const y2 = inPorts.get(key);
+      return { ...edge, key, x1, y1, x2, y2, d: routePath(x1, y1, x2, y2, columns) };
+    });
+  }, [layout, allEdges, focusId, showNetwork, subjectsWithStatus]);
+
+  if (lines.length === 0 || layout.width === 0) return null;
+
+  const isFocusMode = focusId !== null;
+
+  // Dibujar primero las cumplidas, para que las pendientes queden encima
+  const ordered = [...lines].sort((a, b) => Number(b.satisfied) - Number(a.satisfied));
 
   return (
     <svg
-      key={`svg-${showElectives ? 'with' : 'without'}-electives`}
       className="absolute top-0 left-0 pointer-events-none"
-      style={{ 
-        zIndex: 0,
-        width: `${dimensions.width}px`,
-        height: `${dimensions.height}px`,
-        maxWidth: `${dimensions.width}px`,
-        maxHeight: `${dimensions.height}px`
-      }}
-      viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+      style={{ zIndex: 0, width: layout.width, height: layout.height }}
+      viewBox={`0 0 ${layout.width} ${layout.height}`}
+      aria-hidden="true"
     >
       <defs>
-        {/* Marcador de flecha para cursada (azul) */}
-        <marker
-          id="arrowhead-cursada"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="2.5"
-          orient="auto"
-        >
-          <polygon
-            points="0 0, 8 2.5, 0 5"
-            fill="#60a5fa"
-            opacity="0.6"
-          />
-        </marker>
-        {/* Marcador de flecha para aprobación (naranja) */}
-        <marker
-          id="arrowhead-aprobacion"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="2.5"
-          orient="auto"
-        >
-          <polygon
-            points="0 0, 8 2.5, 0 5"
-            fill="#fb923c"
-            opacity="0.6"
-          />
-        </marker>
-        {/* Marcador de flecha destacada para cursada */}
-        <marker
-          id="arrowhead-cursada-highlighted"
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-        >
-          <polygon
-            points="0 0, 10 3, 0 6"
-            fill="#60a5fa"
-          />
-        </marker>
-        {/* Marcador de flecha destacada para aprobación */}
-        <marker
-          id="arrowhead-aprobacion-highlighted"
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-        >
-          <polygon
-            points="0 0, 10 3, 0 6"
-            fill="#fb923c"
-          />
-        </marker>
+        {Object.entries(LINE_COLORS).map(([name, color]) => (
+          <marker
+            key={name}
+            id={`arrow-${name}`}
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            markerUnits="userSpaceOnUse"
+            orient="auto"
+          >
+            <path d="M 0 1 L 9 5 L 0 9 z" fill={color} />
+          </marker>
+        ))}
       </defs>
 
-      {allLines.map(line => {
-        const path = generateCurvePath(line.x1, line.y1, line.x2, line.y2);
-        const isHighlighted = line.isHighlighted;
-        const baseColor = line.type === 'cursada' ? '#60a5fa' : '#fb923c';
-        
+      {ordered.map(line => {
+        const colorKey = line.satisfied ? 'cumplida' : line.type;
+        const color = LINE_COLORS[colorKey];
+        const opacity = isFocusMode ? (line.satisfied ? 0.6 : 0.95) : 0.28;
+
         return (
-          <path
-            key={line.id}
-            d={path}
-            stroke={baseColor}
-            strokeWidth={isHighlighted ? '2.5' : '1.5'}
-            strokeDasharray={line.type === 'aprobacion' ? '5,5' : '0'}
-            fill="none"
-            opacity={isHighlighted ? '0.9' : '0.3'}
-            markerEnd={`url(#arrowhead-${line.type}${isHighlighted ? '-highlighted' : ''})`}
-            strokeLinecap="round"
-            className={isHighlighted ? 'transition-all duration-300' : ''}
-          />
+          <g key={line.key} opacity={opacity}>
+            {/* Halo oscuro para separar la línea de lo que tiene detrás */}
+            {isFocusMode && (
+              <path d={line.d} stroke="#030712" strokeWidth="5" fill="none" opacity="0.6" />
+            )}
+            <path
+              d={line.d}
+              stroke={color}
+              strokeWidth={isFocusMode && !line.satisfied ? 2 : 1.5}
+              strokeDasharray={line.type === 'aprobacion' && !line.satisfied ? '6 4' : undefined}
+              strokeLinecap="round"
+              fill="none"
+              markerEnd={`url(#arrow-${colorKey})`}
+            />
+            <circle cx={line.x1} cy={line.y1} r="2.5" fill={color} />
+          </g>
         );
       })}
     </svg>

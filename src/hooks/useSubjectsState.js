@@ -61,6 +61,18 @@ export const useSubjectsState = (showElectives = true) => {
   };
 
   /**
+   * Fija el estado de una materia a un valor concreto (0-3)
+   * Usado para retroceder un estado o deshacer un cambio
+   */
+  const setSubjectState = (subjectId, newState) => {
+    if (newState < 0 || newState > 3) return;
+    setStates(prevStates => ({
+      ...prevStates,
+      [subjectId]: newState
+    }));
+  };
+
+  /**
    * Otorga o quita la excepción de correlativas de una materia
    */
   const toggleException = (subjectId) => {
@@ -163,6 +175,7 @@ export const useSubjectsState = (showElectives = true) => {
     states,
     exceptions,
     toggleSubjectState,
+    setSubjectState,
     toggleException,
     importExceptions,
     importStates,

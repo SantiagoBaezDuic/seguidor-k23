@@ -51,35 +51,34 @@ const WeeklySchedule = ({
   const [newSlot, setNewSlot] = useState({ day: 0, startSlot: 0, endSlot: 1 });
 
   /**
-   * Genera un color consistente basado en el ID de la materia
-   * Usa 17 colores (número primo) para evitar colisiones con diferencias múltiplos de 15
+   * Genera un color consistente basado en el ID de la materia.
+   * Usa 17 colores (número primo) para evitar colisiones con diferencias múltiplos de 15.
+   * - dot: punto/indicador sólido
+   * - block: bloque en la grilla (tinte + borde izquierdo de acento)
+   * - chip: pill tintada
    */
-  const getSubjectColor = (subjectId, onlyBg = false) => {
+  const getSubjectColor = (subjectId) => {
     const colors = [
-      { full: 'bg-blue-500 border-blue-400', bg: 'bg-blue-500' },
-      { full: 'bg-emerald-500 border-emerald-400', bg: 'bg-emerald-500' },
-      { full: 'bg-amber-500 border-amber-400', bg: 'bg-amber-500' },
-      { full: 'bg-purple-500 border-purple-400', bg: 'bg-purple-500' },
-      { full: 'bg-rose-500 border-rose-400', bg: 'bg-rose-500' },
-      { full: 'bg-indigo-500 border-indigo-400', bg: 'bg-indigo-500' },
-      { full: 'bg-cyan-500 border-cyan-400', bg: 'bg-cyan-500' },
-      { full: 'bg-lime-500 border-lime-400', bg: 'bg-lime-500' },
-      { full: 'bg-fuchsia-500 border-fuchsia-400', bg: 'bg-fuchsia-500' },
-      { full: 'bg-orange-500 border-orange-400', bg: 'bg-orange-500' },
-      { full: 'bg-teal-500 border-teal-400', bg: 'bg-teal-500' },
-      { full: 'bg-violet-500 border-violet-400', bg: 'bg-violet-500' },
-      { full: 'bg-sky-500 border-sky-400', bg: 'bg-sky-500' },
-      { full: 'bg-pink-500 border-pink-400', bg: 'bg-pink-500' },
-      { full: 'bg-green-500 border-green-400', bg: 'bg-green-500' },
-      { full: 'bg-red-500 border-red-400', bg: 'bg-red-500' },
-      { full: 'bg-yellow-500 border-yellow-400', bg: 'bg-yellow-500' },
+      { dot: 'bg-blue-400', block: 'bg-blue-500/20 border-blue-400 text-blue-50', chip: 'bg-blue-500/15 text-blue-200' },
+      { dot: 'bg-emerald-400', block: 'bg-emerald-500/20 border-emerald-400 text-emerald-50', chip: 'bg-emerald-500/15 text-emerald-200' },
+      { dot: 'bg-amber-400', block: 'bg-amber-500/20 border-amber-400 text-amber-50', chip: 'bg-amber-500/15 text-amber-200' },
+      { dot: 'bg-purple-400', block: 'bg-purple-500/20 border-purple-400 text-purple-50', chip: 'bg-purple-500/15 text-purple-200' },
+      { dot: 'bg-rose-400', block: 'bg-rose-500/20 border-rose-400 text-rose-50', chip: 'bg-rose-500/15 text-rose-200' },
+      { dot: 'bg-indigo-400', block: 'bg-indigo-500/20 border-indigo-400 text-indigo-50', chip: 'bg-indigo-500/15 text-indigo-200' },
+      { dot: 'bg-cyan-400', block: 'bg-cyan-500/20 border-cyan-400 text-cyan-50', chip: 'bg-cyan-500/15 text-cyan-200' },
+      { dot: 'bg-lime-400', block: 'bg-lime-500/20 border-lime-400 text-lime-50', chip: 'bg-lime-500/15 text-lime-200' },
+      { dot: 'bg-fuchsia-400', block: 'bg-fuchsia-500/20 border-fuchsia-400 text-fuchsia-50', chip: 'bg-fuchsia-500/15 text-fuchsia-200' },
+      { dot: 'bg-orange-400', block: 'bg-orange-500/20 border-orange-400 text-orange-50', chip: 'bg-orange-500/15 text-orange-200' },
+      { dot: 'bg-teal-400', block: 'bg-teal-500/20 border-teal-400 text-teal-50', chip: 'bg-teal-500/15 text-teal-200' },
+      { dot: 'bg-violet-400', block: 'bg-violet-500/20 border-violet-400 text-violet-50', chip: 'bg-violet-500/15 text-violet-200' },
+      { dot: 'bg-sky-400', block: 'bg-sky-500/20 border-sky-400 text-sky-50', chip: 'bg-sky-500/15 text-sky-200' },
+      { dot: 'bg-pink-400', block: 'bg-pink-500/20 border-pink-400 text-pink-50', chip: 'bg-pink-500/15 text-pink-200' },
+      { dot: 'bg-green-400', block: 'bg-green-500/20 border-green-400 text-green-50', chip: 'bg-green-500/15 text-green-200' },
+      { dot: 'bg-red-400', block: 'bg-red-500/20 border-red-400 text-red-50', chip: 'bg-red-500/15 text-red-200' },
+      { dot: 'bg-yellow-400', block: 'bg-yellow-500/20 border-yellow-400 text-yellow-50', chip: 'bg-yellow-500/15 text-yellow-200' },
     ];
-    
-    // Con 17 colores (primo), IDs que difieren por 15 no colisionan
-    const hash = subjectId % colors.length;
-    
-    const colorSet = colors[hash];
-    return onlyBg ? colorSet.bg : colorSet.full;
+
+    return colors[subjectId % colors.length];
   };
 
   /**
@@ -88,24 +87,6 @@ const WeeklySchedule = ({
   const getTotalSlotsUsed = (subjectId) => {
     const slots = schedule[subjectId] || [];
     return slots.reduce((total, slot) => total + (slot.endSlot - slot.startSlot), 0);
-  };
-
-  /**
-   * Verifica si una celda es la primera en un bloque (no hay materia arriba)
-   */
-  const isFirstInBlock = (day, slot, subjectId) => {
-    if (slot === 0) return true;
-    const subjectsAbove = getSubjectsInCell(day, slot - 1);
-    return !subjectsAbove.includes(subjectId);
-  };
-
-  /**
-   * Verifica si una celda es la última en un bloque (no hay materia abajo)
-   */
-  const isLastInBlock = (day, slot, subjectId) => {
-    if (slot === TIME_SLOTS.length - 1) return true;
-    const subjectsBelow = getSubjectsInCell(day, slot + 1);
-    return !subjectsBelow.includes(subjectId);
   };
 
   /**
@@ -119,21 +100,26 @@ const WeeklySchedule = ({
       return { shouldRender: false, rowSpan: 1 };
     }
 
-    // Verificar si es parte de un bloque que empezó antes
-    if (slot > 0) {
-      const subjectsAbove = getSubjectsInCell(day, slot - 1);
-      if (subjectsAbove.includes(subjectId)) {
-        // Esta celda es continuación de un bloque, no debe renderizarse
-        return { shouldRender: false, rowSpan: 1 };
-      }
+    // Solo se fusionan celdas donde la materia está sola: una celda con
+    // conflicto se dibuja siempre por separado (con todas sus materias), así
+    // un rowSpan nunca "tapa" una celda que igual se renderiza y descuadra la fila
+    const isSoloCell = (cellSubjects) => cellSubjects.length === 1 && cellSubjects[0] === subjectId;
+
+    if (!isSoloCell(subjectsHere)) {
+      return { shouldRender: true, rowSpan: 1 };
     }
 
-    // Es el inicio de un bloque, calcular cuántas celdas contiguas hay
+    // Verificar si es continuación de un bloque fusionado que empezó antes
+    if (slot > 0 && isSoloCell(getSubjectsInCell(day, slot - 1))) {
+      return { shouldRender: false, rowSpan: 1 };
+    }
+
+    // Es el inicio de un bloque, calcular cuántas celdas contiguas (sin conflicto) hay
     let rowSpan = 1;
     let currentSlot = slot + 1;
     while (currentSlot < TIME_SLOTS.length) {
       const subjectsBelow = getSubjectsInCell(day, currentSlot);
-      if (subjectsBelow.includes(subjectId)) {
+      if (isSoloCell(subjectsBelow)) {
         rowSpan++;
         currentSlot++;
       } else {
@@ -162,14 +148,15 @@ const WeeklySchedule = ({
     if (showAddForm !== subject.id) return null;
 
     return (
-      <div className="mt-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+      <div className="mt-3 p-3 bg-gray-900 rounded-lg border border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h5 className="text-sm font-medium text-gray-200">Agregar horario</h5>
           <button
             onClick={() => setShowAddForm(null)}
-            className="p-1 hover:bg-gray-600 rounded transition-colors"
+            className="btn-icon"
+            aria-label="Cerrar formulario"
           >
-            <X className="w-4 h-4 text-gray-400" />
+            <X className="w-4 h-4" />
           </button>
         </div>
         
@@ -180,8 +167,7 @@ const WeeklySchedule = ({
             <select
               value={newSlot.day}
               onChange={(e) => setNewSlot({ ...newSlot, day: parseInt(e.target.value) })}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded 
-                text-gray-200 focus:border-blue-500 focus:outline-none"
+              className="input w-full py-1.5 px-2"
             >
               {DAYS.map(day => (
                 <option key={day.id} value={day.id}>{day.name}</option>
@@ -195,8 +181,7 @@ const WeeklySchedule = ({
             <select
               value={newSlot.startSlot}
               onChange={(e) => setNewSlot({ ...newSlot, startSlot: parseInt(e.target.value) })}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded 
-                text-gray-200 focus:border-blue-500 focus:outline-none"
+              className="input w-full py-1.5 px-2"
             >
               {TIME_SLOTS.map(slot => (
                 <option key={slot.id} value={slot.id}>
@@ -212,8 +197,7 @@ const WeeklySchedule = ({
             <select
               value={newSlot.endSlot}
               onChange={(e) => setNewSlot({ ...newSlot, endSlot: parseInt(e.target.value) })}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded 
-                text-gray-200 focus:border-blue-500 focus:outline-none"
+              className="input w-full py-1.5 px-2"
             >
               {/* Los bloques son [startSlot, endSlot); value=19 permite cubrir hasta
                   la última franja del día (id 18, 22:15-23:00). El label muestra la
@@ -235,8 +219,7 @@ const WeeklySchedule = ({
           <button
             onClick={() => handleAddSlot(subject.id)}
             disabled={newSlot.startSlot >= newSlot.endSlot}
-            className="w-full px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 
-              disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+            className="btn-primary w-full"
           >
             Agregar
           </button>
@@ -254,24 +237,27 @@ const WeeklySchedule = ({
     const exceededHours = totalSlotsUsed > subject.h;
 
     return (
-      <div key={subject.id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+      <div key={subject.id} className="panel-inset relative pl-5 pr-4 py-4 overflow-hidden">
+        <span className={`absolute left-0 top-3 bottom-3 w-1 rounded-r ${getSubjectColor(subject.id).dot}`} aria-hidden="true" />
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <div className={`w-3 h-3 rounded ${getSubjectColor(subject.id, true)}`} title="Color en el horario"></div>
-              <h4 className="font-medium text-gray-200 text-sm">{subject.n}</h4>
+              <h4 className="font-medium text-gray-100 text-sm">{subject.n}</h4>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-block px-2 py-0.5 rounded text-xs ${getSubjectColor(subject.id)}`}>
+              <span className={`pill ${getSubjectColor(subject.id).chip}`}>
                 {slots.length} {slots.length === 1 ? 'bloque' : 'bloques'}
               </span>
-              <span className="text-xs text-gray-400">
-                {totalSlotsUsed} {totalSlotsUsed === 1 ? 'franja' : 'franjas'} / {subject.h}h semanales
+              <span className="text-xs text-gray-500">
+                {totalSlotsUsed} {totalSlotsUsed === 1 ? 'franja' : 'franjas'} de {subject.h} hs semanales
               </span>
               {exceededHours && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-600/20 text-orange-400 border border-orange-600/50">
+                <span
+                  className="pill bg-amber-500/15 text-amber-300"
+                  title={`Las franjas asignadas (${totalSlotsUsed}) superan las horas semanales de la materia (${subject.h} hs)`}
+                >
                   <AlertTriangle className="w-3 h-3" />
-                  Advertencia: Las franjas asignadas ({totalSlotsUsed}) exceden las horas semanales de la materia ({subject.h}h)
+                  Excede las horas
                 </span>
               )}
             </div>
@@ -280,10 +266,11 @@ const WeeklySchedule = ({
           {showAddForm !== subject.id && (
             <button
               onClick={() => setShowAddForm(subject.id)}
-              className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+              className="btn-secondary px-2.5 py-1.5 text-xs"
               title="Agregar horario"
             >
-              <Plus className="w-4 h-4 text-white" />
+              <Plus className="w-3.5 h-3.5" />
+              Horario
             </button>
           )}
         </div>
@@ -294,7 +281,7 @@ const WeeklySchedule = ({
             {slots.map((slot, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-2 bg-gray-700/50 rounded text-xs"
+                className="flex items-center justify-between pl-2.5 pr-1 py-1 bg-gray-900 border border-gray-800 rounded-md text-xs"
               >
                 <span className="text-gray-300">
                   {DAYS[slot.day].short}: {TIME_SLOTS[slot.startSlot].label} - {TIME_SLOTS[slot.endSlot - 1].label}
@@ -304,10 +291,11 @@ const WeeklySchedule = ({
                 </span>
                 <button
                   onClick={() => onRemoveSlot(subject.id, idx)}
-                  className="p-1 hover:bg-red-600/50 rounded transition-colors"
+                  className="btn-icon p-1 hover:text-red-300"
                   title="Eliminar"
+                  aria-label="Eliminar bloque"
                 >
-                  <Trash2 className="w-3 h-3 text-red-400" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
@@ -326,32 +314,32 @@ const WeeklySchedule = ({
   return (
     <div className="space-y-6">
       {/* Controles de asignación de horarios */}
-      <div className="bg-gray-800/30 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
+      <div>
+        <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
           Asignar horarios
         </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
           {selectedSubjects.map(subject => renderSubjectSlots(subject))}
         </div>
       </div>
 
       {/* Calendario semanal */}
-      <div className="bg-gray-800/30 rounded-lg p-4 overflow-x-auto">
-        <h3 className="text-lg font-semibold text-gray-200 mb-4">Horario semanal</h3>
+      <div className="overflow-x-auto">
+        <h3 className="text-sm font-medium text-gray-300 mb-2">Grilla semanal</h3>
         
         <div className="min-w-[800px]">
-          <table className="w-full border-collapse">
+          <table className="w-full table-fixed border-separate border-spacing-0 rounded-lg overflow-hidden border border-gray-800">
             <thead>
               <tr>
-                <th className="border border-gray-700 bg-gray-800 p-2 text-xs font-semibold text-gray-300 w-24">
+                <th className="border-b border-r border-gray-800 bg-gray-900 p-2 text-xs font-medium text-gray-400 w-24 text-left">
                   Horario
                 </th>
                 {DAYS.map(day => (
                   <th
                     key={day.id}
-                    className="border border-gray-700 bg-gray-800 p-2 text-xs font-semibold text-gray-300"
+                    className="border-b border-r border-gray-800 last:border-r-0 bg-gray-900 p-2 text-xs font-medium text-gray-300"
                   >
                     {day.name}
                   </th>
@@ -360,37 +348,12 @@ const WeeklySchedule = ({
             </thead>
             <tbody>
               {TIME_SLOTS.map(slot => (
-                <tr key={slot.id}>
-                  <td className="border border-gray-700 bg-gray-800/50 p-2 text-xs text-gray-400 whitespace-nowrap">
-                    <div className="font-medium">{slot.label}</div>
-                    <div className="text-[10px]">{slot.time}</div>
+                <tr key={slot.id} className={slot.id === 7 || slot.id === 14 ? '[&>td]:border-t-gray-600' : ''}>
+                  <td className="border-b border-r border-gray-800 bg-gray-900/70 px-2 py-1 text-xs text-gray-400 whitespace-nowrap">
+                    <div className="font-medium text-gray-300">{slot.label}</div>
+                    <div className="text-[10px] text-gray-500 tabular-nums">{slot.time}</div>
                   </td>
                   {DAYS.map(day => {
-                    // Determinar qué hora mostrar en esta celda según si es inicio/fin de bloque
-                    let cellTimeDisplay = null;
-                    const subjectsInSlot = getSubjectsInCell(day.id, slot.id);
-                    
-                    if (subjectsInSlot.length === 1) {
-                      // Solo una materia, verificar si es inicio o fin de bloque
-                      const subjectId = subjectsInSlot[0];
-                      const isFirst = isFirstInBlock(day.id, slot.id, subjectId);
-                      const isLast = isLastInBlock(day.id, slot.id, subjectId);
-                      
-                      if (isFirst && !isLast) {
-                        // Primera celda: mostrar solo hora de inicio
-                        cellTimeDisplay = TIME_SLOTS[slot.id].time.split('-')[0];
-                      } else if (isLast && !isFirst) {
-                        // Última celda: mostrar solo hora de fin
-                        cellTimeDisplay = TIME_SLOTS[slot.id].time.split('-')[1];
-                      } else if (isFirst && isLast) {
-                        // Celda única (bloque de 1 slot): mostrar rango completo
-                        cellTimeDisplay = TIME_SLOTS[slot.id].time;
-                      }
-                      // Si no es ni primera ni última, es una celda intermedia y se fusionó (no se renderiza)
-                    } else if (subjectsInSlot.length > 1) {
-                      // Conflicto: mostrar tiempo completo
-                      cellTimeDisplay = TIME_SLOTS[slot.id].time;
-                    }
                     const subjectsInCell = getSubjectsInCell(day.id, slot.id);
                     const hasConflict = hasConflictInCell(day.id, slot.id);
                     const isEmpty = subjectsInCell.length === 0;
@@ -422,22 +385,25 @@ const WeeklySchedule = ({
                     }
 
                     // Determinar si usar rowSpan (solo si hay una sola materia sin conflicto)
-                    const useRowSpan = cellsToRender.length === 1 && !hasConflict && cellsToRender[0].rowSpan > 1;
+                    const useRowSpan = cellsToRender.length === 1 && !hasConflict;
+                    const blockTimeRange = useRowSpan
+                      ? `${slot.time.split('-')[0]} - ${TIME_SLOTS[slot.id + cellsToRender[0].rowSpan - 1].time.split('-')[1]}`
+                      : null;
                     
                     // Si hay fusión, aplicar el color de fondo a toda la celda
-                    const cellBgColor = useRowSpan ? getSubjectColor(cellsToRender[0].subjectId, true) : '';
+                    const cellBgColor = useRowSpan ? `${getSubjectColor(cellsToRender[0].subjectId).block} border-l-4` : '';
 
                     return (
                       <td
                         key={day.id}
                         rowSpan={useRowSpan ? cellsToRender[0].rowSpan : 1}
-                        className={`border border-gray-700 text-xs relative ${
-                          useRowSpan 
-                            ? `${cellBgColor} p-3 align-middle` 
-                            : isEmpty 
-                            ? 'bg-gray-900/30 p-1' 
-                            : hasConflict 
-                            ? 'bg-red-900/40 p-1' 
+                        className={`border-b border-r border-gray-800 last:border-r-0 text-xs relative ${
+                          useRowSpan
+                            ? `${cellBgColor} px-3 py-2 align-middle`
+                            : isEmpty
+                            ? 'bg-gray-950/40 p-1'
+                            : hasConflict
+                            ? 'bg-red-500/15 p-1 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.6)]'
                             : 'p-1'
                         }`}
                       >
@@ -446,14 +412,14 @@ const WeeklySchedule = ({
                             key={subjectId}
                             className={`${
                               useRowSpan 
-                                ? 'text-white font-semibold text-sm text-center' 
-                                : `px-2 py-1 rounded border ${getSubjectColor(subjectId)} text-white font-medium truncate ${hasConflict ? 'opacity-70' : ''}`
+                                ? 'font-medium text-[13px] leading-snug'
+                                : `px-2 py-1 rounded border-l-2 ${getSubjectColor(subjectId).block} font-medium truncate`
                             }`}
                             title={subject.n}
                           >
                             <div>{useRowSpan ? subject.n : `${subject.n.substring(0, 15)}...`}</div>
-                            {useRowSpan && cellTimeDisplay && (
-                              <div className="text-xs text-white/70 mt-1">{cellTimeDisplay}</div>
+                            {blockTimeRange && (
+                              <div className="text-[11px] opacity-70 mt-0.5 tabular-nums">{blockTimeRange}</div>
                             )}
                           </div>
                         ))}
@@ -472,11 +438,10 @@ const WeeklySchedule = ({
         </div>
 
         {/* Nota sobre conflictos */}
-        <div className="mt-4 flex items-start gap-2 text-xs text-gray-400">
-          <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+        <div className="mt-3 flex items-start gap-2 text-xs text-gray-500">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
           <p>
-            Las celdas con fondo rojo indican conflictos de horario. 
-            Ajusta los bloques para evitar superposiciones.
+            Las celdas con borde rojo indican superposición de horarios. Ajustá los bloques para evitarla.
           </p>
         </div>
       </div>
