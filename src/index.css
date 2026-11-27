@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Piezas compartidas del lenguaje visual (mismo estilo que las tarjetas del plan):
+ * superficies oscuras con borde sutil, tintes suaves por color y pills chicas.
+ */
+@layer components {
+  .page-container {
+    @apply mx-auto w-full max-w-[1760px] px-4 sm:px-6;
+  }
+
+  .panel {
+    @apply bg-gray-900/60 border border-gray-800 rounded-xl;
+  }
+
+  .panel-inset {
+    @apply bg-gray-950/50 border border-gray-800 rounded-lg;
+  }
+
+  .pill {
+    @apply text-[11px] leading-none px-2 py-1 rounded-full inline-flex items-center gap-1 whitespace-nowrap;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium
+      transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 hover:bg-blue-500 text-white;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-500/40 text-red-300 hover:bg-red-500/10;
+  }
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center p-1.5 rounded-md text-gray-400 hover:text-gray-100
+      hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400;
+  }
+
+  .input {
+    @apply px-3 py-2 text-sm bg-gray-950/60 border border-gray-700 rounded-lg text-gray-200
+      placeholder:text-gray-500 focus:outline-none focus:border-blue-500;
+  }
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -41,4 +91,24 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-600;
+}
+
+/* Compensar el header sticky al navegar a secciones por ancla */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

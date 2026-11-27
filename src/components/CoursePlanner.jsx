@@ -1,5 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, BookOpen, Calendar, AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { Clock, BookOpen, Calendar, AlertTriangle, Check, CheckCircle2 } from 'lucide-react';
+
+// Umbrales de carga horaria semanal
+const HEAVY_HOURS = 24;
+const MAX_HOURS = 30;
+
+// Solo pueden figurar materias por cursar (0) o en curso (1): las Regulares y
+// Aprobadas se quitan del planificador en App.jsx
+const STATE_PILLS = {
+  1: { label: 'Cursando', className: 'bg-sky-500/15 text-sky-300' }
+};
 
 /**
  * Componente para planificar qué materias cursar
@@ -25,8 +35,15 @@ const CoursePlanner = ({ availableSubjects, selectedSubjects, selectedSubjectsDa
     return sum + (subject?.h || 0);
   }, 0);
 
-  const isOverloaded = totalHours > 30;
-  const isHeavy = totalHours > 24 && totalHours <= 30;
+  const isOverloaded = totalHours > MAX_HOURS;
+  const isHeavy = totalHours > HEAVY_HOURS && !isOverloaded;
+
+  const load = isOverloaded
+    ? { bar: 'bg-red-500', text: 'text-red-300', icon: AlertTriangle, message: `Carga muy alta (recomendado: menos de ${MAX_HOURS} hs)` }
+    : isHeavy
+      ? { bar: 'bg-amber-500', text: 'text-amber-300', icon: AlertTriangle, message: `Carga considerable (recomendado: menos de ${HEAVY_HOURS} hs)` }
+      : { bar: 'bg-blue-500', text: 'text-blue-300', icon: CheckCircle2, message: 'Carga balanceada' };
+  const LoadIcon = load.icon;
 
   /**
    * Maneja el toggle de selección de una materia
@@ -39,161 +56,142 @@ const CoursePlanner = ({ availableSubjects, selectedSubjects, selectedSubjectsDa
     }
   };
 
-  /**
-   * Obtiene el label de modalidad
-   */
-  const getModalityLabel = (modality) => {
-    return modality === 'A' ? 'Anual' : 'Cuatrimestral';
-  };
-
-  /**
-   * Obtiene el color del badge de nivel
-   */
-  const getLevelColor = (level) => {
-    const colors = {
-      1: 'bg-blue-500/20 text-blue-300 border-blue-500/50',
-      2: 'bg-green-500/20 text-green-300 border-green-500/50',
-      3: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
-      4: 'bg-orange-500/20 text-orange-300 border-orange-500/50',
-      5: 'bg-red-500/20 text-red-300 border-red-500/50',
-    };
-    return colors[level] || colors[1];
-  };
-
   if (displaySubjects.length === 0) {
     return (
-      <div className="bg-gray-800/30 rounded-lg p-8 text-center">
-        <BookOpen className="w-12 h-12 mx-auto text-gray-600 mb-4" />
-        <p className="text-gray-400 text-lg mb-2">No hay materias disponibles para cursar</p>
-        <p className="text-gray-500 text-sm">
-          Completa las correlativas necesarias para habilitar nuevas materias
-        </p>
+      <div className="panel-inset p-8 flex flex-col items-center text-center gap-2">
+        <BookOpen className="w-6 h-6 text-gray-500" />
+        <p className="text-sm text-gray-300">No hay materias disponibles para cursar</p>
+        <p className="text-xs text-gray-500">Completá las correlativas necesarias para habilitar nuevas materias.</p>
       </div>
     );
   }
 
+  const groups = [
+    { title: 'Obligatorias', items: displaySubjects.filter(s => s.l !== 6) },
+    { title: 'Electivas', items: displaySubjects.filter(s => s.l === 6) }
+  ].filter(group => group.items.length > 0);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Resumen de carga horaria */}
-      <div className={`rounded-lg p-4 border-2 transition-colors ${
-        isOverloaded 
-          ? 'bg-red-900/20 border-red-500 text-red-200' 
-          : isHeavy
-          ? 'bg-yellow-900/20 border-yellow-500 text-yellow-200'
-          : 'bg-blue-900/20 border-blue-500 text-blue-200'
-      }`}>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <Clock className="w-6 h-6" />
-            <div>
-              <p className="font-semibold text-lg">
-                Carga horaria total: {totalHours} horas semanales
-              </p>
-              <p className="text-sm opacity-80">
-                {selectedSubjects.length} {selectedSubjects.length === 1 ? 'materia seleccionada' : 'materias seleccionadas'}
-              </p>
-            </div>
+      <div className="panel-inset p-4 space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs text-gray-400 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              Carga horaria semanal
+            </p>
+            <p className="text-2xl font-semibold text-gray-100 tabular-nums mt-0.5">
+              {totalHours} <span className="text-sm font-normal text-gray-400">hs</span>
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                · {selectedSubjects.length} {selectedSubjects.length === 1 ? 'materia' : 'materias'}
+              </span>
+            </p>
           </div>
-          
-          {isOverloaded && (
-            <div className="flex items-center gap-2 text-red-300">
-              <AlertTriangle className="w-5 h-5" />
-              <span className="text-sm font-medium">¡Carga muy alta! (recomendado: {'<'} 30hs)</span>
-            </div>
+          {selectedSubjects.length > 0 && (
+            <p className={`text-sm flex items-center gap-1.5 ${load.text}`}>
+              <LoadIcon className="w-4 h-4" />
+              {load.message}
+            </p>
           )}
-          
-          {isHeavy && !isOverloaded && (
-            <div className="text-sm font-medium text-yellow-300">
-              Carga considerable (recomendado: {'<'} 24hs)
-            </div>
-          )}
-
-          {totalHours <= 24 && selectedSubjects.length > 0 && (
-            <div className="text-sm font-medium text-blue-300">
-              Carga balanceada ✓
-            </div>
-          )}
+        </div>
+        {/* Medidor con marcas en 24 y 30 hs */}
+        <div className="relative">
+          <div className="h-2 rounded-full bg-gray-800 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${load.bar}`}
+              style={{ width: `${Math.min(100, (totalHours / (MAX_HOURS + 6)) * 100)}%` }}
+            />
+          </div>
+          {[HEAVY_HOURS, MAX_HOURS].map(mark => (
+            <span
+              key={mark}
+              className="absolute -top-0.5 h-3 w-px bg-gray-500"
+              style={{ left: `${(mark / (MAX_HOURS + 6)) * 100}%` }}
+              title={`${mark} hs`}
+              aria-hidden="true"
+            />
+          ))}
         </div>
       </div>
 
-      {/* Lista de materias disponibles */}
-      <div className="bg-gray-800/30 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
-          <BookOpen className="w-5 h-5" />
-          Materias disponibles ({availableSubjects.length})
-        </h3>
+      {/* Materias disponibles */}
+      {groups.map(group => (
+        <div key={group.title}>
+          <h3 className="text-sm font-medium text-gray-300 mb-2">
+            {group.title} <span className="text-gray-500">({group.items.length})</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {group.items.map(subject => {
+              const isSelected = selectedSubjects.includes(subject.id);
+              const statePill = STATE_PILLS[subject.state];
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {displaySubjects.map(subject => {
-            const isSelected = selectedSubjects.includes(subject.id);
-            const stateLabel = subject.state === 1 ? 'Cursando' : subject.state === 2 ? 'Regular' : subject.state === 3 ? 'Aprobada' : null;
+              return (
+                <label
+                  key={subject.id}
+                  className={`
+                    relative flex items-start gap-3 pl-4 pr-3 py-3 rounded-lg border cursor-pointer
+                    transition-colors focus-within:ring-2 focus-within:ring-blue-400
+                    ${isSelected
+                      ? 'bg-blue-500/10 border-blue-500/60'
+                      : 'bg-gray-950/50 border-gray-800 hover:border-gray-600'}
+                  `}
+                >
+                  <span
+                    className={`absolute left-0 top-3 bottom-3 w-1 rounded-r ${isSelected ? 'bg-blue-400' : 'bg-gray-700'}`}
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleToggle(subject.id)}
+                    className="sr-only"
+                  />
+                  {/* Checkbox visual */}
+                  <span
+                    className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border ${
+                      isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-600'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  </span>
 
-            return (
-              <label
-                key={subject.id}
-                className={`
-                  flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer
-                  transition-all duration-200
-                  ${isSelected 
-                    ? 'bg-blue-900/30 border-blue-500 shadow-lg' 
-                    : 'bg-gray-700/30 border-gray-600 hover:border-gray-500 hover:bg-gray-700/50'
-                  }
-                `}
-              >
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => handleToggle(subject.id)}
-                  className="mt-1 w-4 h-4 rounded border-gray-500 bg-gray-700 
-                    text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0
-                    cursor-pointer"
-                />
-                
-                {/* Información de la materia */}
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm text-gray-200 mb-2 leading-tight">
-                    {subject.n}
-                  </h4>
-                  
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {/* Badge de nivel */}
-                    <span className={`px-2 py-0.5 rounded-full border ${getLevelColor(subject.l)}`}>
-                      Nivel {subject.l}
-                    </span>
-                    
-                    {/* Horas */}
-                    <span className="px-2 py-0.5 rounded-full bg-gray-600/50 text-gray-300 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {subject.h}hs/sem
-                    </span>
-                    
-                    {/* Modalidad */}
-                    <span className="px-2 py-0.5 rounded-full bg-gray-600/50 text-gray-300 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {getModalityLabel(subject.m)}
-                    </span>
-                    
-                    {/* Badge TI */}
-                    {subject.it && (
-                      <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-semibold">
-                        TI
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-[13px] leading-snug text-gray-100">
+                      {subject.n}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="pill bg-gray-800 text-gray-300">
+                        {subject.l === 6 ? 'Electiva' : `${subject.l}° año`}
                       </span>
-                    )}
-
-                    {/* Badge de estado (si ya no figura entre las "disponibles") */}
-                    {stateLabel && (
-                      <span className="px-2 py-0.5 rounded-full bg-sky-600/30 text-sky-200 font-medium">
-                        {stateLabel}
+                      <span className="pill bg-gray-800 text-gray-300">
+                        <Clock className="w-3 h-3" />
+                        {subject.h} hs
                       </span>
-                    )}
+                      <span className="pill bg-gray-800 text-gray-300">
+                        <Calendar className="w-3 h-3" />
+                        {subject.m === 'A' ? 'Anual' : 'Cuatrimestral'}
+                      </span>
+                      {subject.it && (
+                        <span
+                          className="text-[10px] leading-none px-1.5 py-1 rounded font-semibold text-purple-300 border border-purple-500/40"
+                          title="Cuenta para el Título Intermedio"
+                        >
+                          TI
+                        </span>
+                      )}
+                      {statePill && (
+                        <span className={`pill ${statePill.className}`}>{statePill.label}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </label>
-            );
-          })}
+                </label>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 };
