@@ -4,11 +4,12 @@ import { canEnroll } from './correlations';
 /**
  * Encuentra materias que todos los participantes pueden cursar Y tienen pendientes
  * @param {Object} userStates - Estados del usuario actual
- * @param {Array} classmates - Array de objetos {id, name, states, timestamp}
+ * @param {Array} classmates - Array de objetos {id, name, states, exceptions, timestamp}
  * @param {boolean} showElectives - Si es false, excluye materias electivas (nivel 6)
+ * @param {Array<number>} [userExceptions] - Excepciones de correlativas del usuario
  * @returns {Array} - Array de IDs de materias que todos pueden cursar y ninguno cursó
  */
-export const findCommonEnrollableSubjects = (userStates, classmates, showElectives = true) => {
+export const findCommonEnrollableSubjects = (userStates, classmates, showElectives = true, userExceptions = []) => {
   if (!classmates || classmates.length === 0) {
     return [];
   }
@@ -20,7 +21,7 @@ export const findCommonEnrollableSubjects = (userStates, classmates, showElectiv
       if ((userStates[subject.id] || 0) !== 0) return false;
       
       // Usuario puede cursarla
-      if (!canEnroll(subject.id, userStates)) return false;
+      if (!canEnroll(subject.id, userStates, userExceptions)) return false;
       
       // TODOS los compañeros deben tenerla pendiente Y poder cursarla
       const allClassmatesCanEnroll = classmates.every(classmate => {
@@ -28,7 +29,7 @@ export const findCommonEnrollableSubjects = (userStates, classmates, showElectiv
         // Debe estar en estado 0 (no cursada)
         if (classmateState !== 0) return false;
         // Y debe poder cursarla
-        return canEnroll(subject.id, classmate.states);
+        return canEnroll(subject.id, classmate.states, classmate.exceptions);
       });
       
       return allClassmatesCanEnroll;
@@ -40,12 +41,13 @@ export const findCommonEnrollableSubjects = (userStates, classmates, showElectiv
  * Encuentra materias pendientes que el usuario y UN compañero específico pueden cursar
  * Excluye materias que ya están en la lista de comunes a todos
  * @param {Object} userStates - Estados del usuario actual
- * @param {Object} classmate - Objeto {id, name, states, timestamp} de un compañero
+ * @param {Object} classmate - Objeto {id, name, states, exceptions, timestamp} de un compañero
  * @param {Array} excludeIds - IDs de materias a excluir (las comunes a todos)
  * @param {boolean} showElectives - Si es false, excluye materias electivas (nivel 6)
+ * @param {Array<number>} [userExceptions] - Excepciones de correlativas del usuario
  * @returns {Array} - Array de IDs de materias que ambos pueden cursar (excluye las comunes a todos)
  */
-export const findPairwiseCommonSubjects = (userStates, classmate, excludeIds = [], showElectives = true) => {
+export const findPairwiseCommonSubjects = (userStates, classmate, excludeIds = [], showElectives = true, userExceptions = []) => {
   return subjects
     .filter(subject => showElectives || subject.l !== 6)
     .filter(subject => {
@@ -61,10 +63,10 @@ export const findPairwiseCommonSubjects = (userStates, classmate, excludeIds = [
       if (classmateState !== 0) return false;
       
       // Usuario puede cursarla
-      if (!canEnroll(subject.id, userStates)) return false;
+      if (!canEnroll(subject.id, userStates, userExceptions)) return false;
       
       // Compañero puede cursarla
-      if (!canEnroll(subject.id, classmate.states)) return false;
+      if (!canEnroll(subject.id, classmate.states, classmate.exceptions)) return false;
       
       return true;
     })
@@ -77,19 +79,20 @@ export const findPairwiseCommonSubjects = (userStates, classmate, excludeIds = [
  * @param {number} subjectId - ID de la materia
  * @param {Object} userStates - Estados del usuario
  * @param {Array} classmates - Array de compañeros
+ * @param {Array<number>} [userExceptions] - Excepciones de correlativas del usuario
  * @returns {Object} - {canEnrollCount, total, participants: [{name, canEnroll, state, isPending}]}
  */
-export const getComparisonMatrix = (subjectId, userStates, classmates) => {
+export const getComparisonMatrix = (subjectId, userStates, classmates, userExceptions = []) => {
   const participants = [
     {
       name: 'Tú',
-      canEnroll: canEnroll(subjectId, userStates),
+      canEnroll: canEnroll(subjectId, userStates, userExceptions),
       state: userStates[subjectId] || 0,
       isPending: (userStates[subjectId] || 0) === 0
     },
     ...classmates.map(classmate => ({
       name: classmate.name,
-      canEnroll: canEnroll(subjectId, classmate.states),
+      canEnroll: canEnroll(subjectId, classmate.states, classmate.exceptions),
       state: classmate.states[subjectId] || 0,
       isPending: (classmate.states[subjectId] || 0) === 0
     }))
@@ -112,9 +115,10 @@ export const getComparisonMatrix = (subjectId, userStates, classmates) => {
  * @param {Object} userStates - Estados del usuario
  * @param {Array} classmates - Array de compañeros
  * @param {boolean} showElectives - Si es false, excluye materias electivas (nivel 6)
+ * @param {Array<number>} [userExceptions] - Excepciones de correlativas del usuario
  * @returns {Object} - {percentage, commonSubjects, totalAvailable}
  */
-export const calculateGroupCompatibility = (userStates, classmates, showElectives = true) => {
+export const calculateGroupCompatibility = (userStates, classmates, showElectives = true, userExceptions = []) => {
   if (!classmates || classmates.length === 0) {
     return { percentage: 0, commonSubjects: 0, totalAvailable: 0 };
   }
@@ -123,11 +127,11 @@ export const calculateGroupCompatibility = (userStates, classmates, showElective
   const userAvailable = subjects.filter(s => {
     if (!showElectives && s.l === 6) return false;
     const state = userStates[s.id] || 0;
-    return state === 0 && canEnroll(s.id, userStates);
+    return state === 0 && canEnroll(s.id, userStates, userExceptions);
   }).length;
 
   // Materias comunes a todos (pendientes y disponibles para todos)
-  const commonSubjects = findCommonEnrollableSubjects(userStates, classmates, showElectives).length;
+  const commonSubjects = findCommonEnrollableSubjects(userStates, classmates, showElectives, userExceptions).length;
 
   const percentage = userAvailable > 0 
     ? Math.round((commonSubjects / userAvailable) * 100)

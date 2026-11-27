@@ -85,12 +85,13 @@ const evaluateCorrelatives = (correlatives, states, requiredState) => {
   return true;
 };
 
-/** * Verifica si una materia puede ser cursada según las correlativas de cursada y aprobación
+/** * Verifica si una materia cumple realmente las correlativas para cursarla
+ * (sin considerar excepciones de correlativas)
  * @param {number} subjectId - ID de la materia
  * @param {Object} states - Objeto con estados de todas las materias {id: estado}
- * @returns {boolean} - true si cumple todas las correlativas (rc en estado 1 o 2, ra en estado 2)
+ * @returns {boolean} - true si cumple todas las correlativas (rc Regular o Aprobada, ra Aprobada)
  */
-export const canEnroll = (subjectId, states) => {
+export const meetsCorrelatives = (subjectId, states) => {
   const subject = subjects.find(s => s.id === subjectId);
   if (!subject) return false;
 
@@ -101,6 +102,34 @@ export const canEnroll = (subjectId, states) => {
   const raOk = evaluateCorrelatives(subject.ra, states, 3);
 
   return rcOk && raOk;
+};
+
+/**
+ * Verifica si una materia puede ser cursada: cumple las correlativas o tiene
+ * una excepción de correlativas otorgada.
+ * La excepción solo habilita la cursada; el final sigue requiriendo las
+ * correlativas de aprobación (ver canTakeExam).
+ * @param {number} subjectId - ID de la materia
+ * @param {Object} states - Objeto con estados de todas las materias {id: estado}
+ * @param {Array<number>} [exceptions] - IDs de materias con excepción de correlativas
+ * @returns {boolean}
+ */
+export const canEnroll = (subjectId, states, exceptions = []) => {
+  if (exceptions && exceptions.includes(subjectId)) {
+    return subjects.some(s => s.id === subjectId);
+  }
+  return meetsCorrelatives(subjectId, states);
+};
+
+/**
+ * Sanea una lista de excepciones importada/persistida: solo IDs de materias válidos, sin duplicados
+ * @param {*} exceptions - Valor crudo
+ * @returns {Array<number>}
+ */
+export const sanitizeExceptions = (exceptions) => {
+  if (!Array.isArray(exceptions)) return [];
+  const validIds = new Set(subjects.map(s => s.id));
+  return [...new Set(exceptions.map(Number).filter(id => validIds.has(id)))];
 };
 
 /**
@@ -116,7 +145,8 @@ export const canTakeExam = (subjectId, states) => {
   // Si no tiene correlativas de aprobación, puede rendir cuando quiera
   if (!subject.ra) return true;
   if (Array.isArray(subject.ra) && subject.ra.length === 0) return true;
-  if (typeof subject.ra === 'object' && !subject.ra.all && !subject.ra.any) return true;
+  // (un array también es typeof 'object': solo aplica al formato {all, any})
+  if (!Array.isArray(subject.ra) && typeof subject.ra === 'object' && !subject.ra.all && !subject.ra.any) return true;
 
   // Verificar correlativas de aprobación usando evaluateCorrelatives
   return evaluateCorrelatives(subject.ra, states, 3);

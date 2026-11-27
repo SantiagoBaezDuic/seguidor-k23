@@ -11,7 +11,8 @@ const LevelColumn = ({
   states,
   onSubjectClick,
   highlightedIds = [],
-  comparisonData = null, // { userStates, classmates }
+  comparisonData = null, // { userStates, userExceptions, classmates }
+  onToggleException,
   layout = 'column' // 'column' (una tira vertical dentro del grid horizontal) o 'grid' (grilla compacta multi-columna, para secciones independientes como Electivas)
 }) => {
   const levelNames = {
@@ -56,7 +57,8 @@ const LevelColumn = ({
               comparisonInfo = getComparisonMatrix(
                 subject.id,
                 comparisonData.userStates,
-                comparisonData.classmates
+                comparisonData.classmates,
+                comparisonData.userExceptions
               );
               
               // Si nadie puede cursarla (canEnrollCount === 0), no mostrar badge
@@ -72,6 +74,9 @@ const LevelColumn = ({
                 state={subjectState}
                 canEnroll={subject.canEnroll}
                 canTakeExam={subject.canTakeExam}
+                meetsCorrelatives={subject.meetsCorrelatives}
+                hasException={subject.hasException}
+                onToggleException={onToggleException ? () => onToggleException(subject.id) : undefined}
                 isHighlighted={highlightedIds.includes(subject.id)}
                 comparisonInfo={comparisonInfo}
                 onClick={() => onSubjectClick(subject.id)}

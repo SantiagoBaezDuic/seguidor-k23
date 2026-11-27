@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle, BookOpen, Clock, CheckCircle, GraduationCap, Users } from 'lucide-react';
+import { Circle, BookOpen, Clock, CheckCircle, GraduationCap, Users, ShieldAlert } from 'lucide-react';
 import { correlatesToText } from '../utils/correlations';
 
 /**
@@ -10,6 +10,9 @@ const SubjectCard = ({
   state, 
   canEnroll, 
   canTakeExam, 
+  meetsCorrelatives = true,
+  hasException = false,
+  onToggleException,
   isHighlighted,
   comparisonInfo, // { canEnrollCount, total, allCanEnroll }
   onClick 
@@ -60,12 +63,35 @@ const SubjectCard = ({
       parts.push(`Aprobación: ${raText}`);
     }
     
+    if (hasException) {
+      parts.push('Excepción de correlativas otorgada (el final sigue requiriendo las correlativas aprobadas)');
+    }
+
     return parts.join(' | ');
   };
 
+  // El chip de excepción solo tiene sentido si faltan correlativas
+  const showExceptionControl = !meetsCorrelatives && typeof onToggleException === 'function';
+
+  const handleExceptionClick = (e) => {
+    e.stopPropagation(); // no ciclar el estado de la materia
+    onToggleException();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.target !== e.currentTarget) return; // teclas sobre el chip interno
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       title={getTooltip()}
       data-subject-id={subject.id}
       className={`
@@ -73,6 +99,8 @@ const SubjectCard = ({
         ${getStateStyles()}
         ${isHighlighted ? 'ring-2 ring-blue-400 animate-pulse' : ''}
         transition-all duration-300 
+        cursor-pointer select-none
+        ${hasException ? 'border-dashed' : ''}
         hover:scale-105 hover:shadow-lg
         focus:outline-none focus:ring-2 focus:ring-blue-500
         text-left
@@ -137,13 +165,56 @@ const SubjectCard = ({
             ✓ Habilitada final
           </span>
         )}
+        {state === 2 && !canTakeExam && (
+          <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full">
+            ✗ Final bloqueado
+          </span>
+        )}
         {state === 0 && !canEnroll && (
           <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full">
             ✗ Bloqueada
           </span>
         )}
+
+        {/* Excepción de correlativas */}
+        {showExceptionControl && hasException && (
+          <button
+            type="button"
+            onClick={handleExceptionClick}
+            title="Cursada con excepción de correlativas. Click para quitarla."
+            className="text-xs px-2 py-0.5 bg-amber-500/30 text-amber-200 rounded-full flex items-center gap-1
+              hover:bg-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-400"
+          >
+            <ShieldAlert className="w-3 h-3" />
+            Excepción
+          </button>
+        )}
+        {showExceptionControl && !hasException && state === 0 && (
+          <button
+            type="button"
+            onClick={handleExceptionClick}
+            title="Marcar que te otorgaron excepción de correlativas para cursar esta materia"
+            className="text-xs px-2 py-0.5 border border-amber-500/50 text-amber-300 rounded-full flex items-center gap-1
+              hover:bg-amber-500/20 focus:outline-none focus:ring-1 focus:ring-amber-400"
+          >
+            <ShieldAlert className="w-3 h-3" />
+            Pedir excepción
+          </button>
+        )}
+        {showExceptionControl && !hasException && state !== 0 && (
+          <button
+            type="button"
+            onClick={handleExceptionClick}
+            title="Esta materia figura cursada pero le faltan correlativas. Click para marcarla como excepción."
+            className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full flex items-center gap-1
+              hover:bg-red-500/30 focus:outline-none focus:ring-1 focus:ring-red-400"
+          >
+            <ShieldAlert className="w-3 h-3" />
+            Sin correlativas · ¿excepción?
+          </button>
+        )}
       </div>
-    </button>
+    </div>
   );
 };
 

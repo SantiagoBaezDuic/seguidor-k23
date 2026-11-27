@@ -23,8 +23,10 @@ const ExportImport = ({
   currentStates,
   currentSchedule,
   currentSelectedCourses,
+  currentExceptions,
   userName,
   onImport,
+  onImportExceptions,
   onImportSchedule,
   onImportSelectedCourses,
   onReset
@@ -36,10 +38,11 @@ const ExportImport = ({
    */
   const handleExport = () => {
     const data = {
-      version: '1.2',
+      version: '1.3',
       timestamp: new Date().toISOString(),
       name: userName || '',
       states: currentStates,
+      exceptions: currentExceptions || [],
       schedule: currentSchedule || {},
       selectedCourses: currentSelectedCourses || []
     };
@@ -85,6 +88,11 @@ const ExportImport = ({
 
         if (confirmation) {
           onImport(data.states, data.version);
+
+          // Excepciones de correlativas (>= v1.3); backups viejos no las traen
+          if (onImportExceptions) {
+            onImportExceptions(Array.isArray(data.exceptions) ? data.exceptions : []);
+          }
 
           // Importar horarios si existen (compatibilidad con versiones antiguas)
           if (data.schedule && typeof data.schedule === 'object' && onImportSchedule) {

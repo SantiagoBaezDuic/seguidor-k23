@@ -5,11 +5,12 @@ import {
   validateComparisonJSON
 } from '../utils/compareProgress';
 import { isLegacyStatesPayload, migrateLegacyStates } from '../utils/stateMigration';
+import { sanitizeExceptions } from '../utils/correlations';
 
 /**
  * Hook para gestionar comparación de progreso con compañeros
  */
-export const useComparisonState = (userStates, showElectives = true) => {
+export const useComparisonState = (userStates, showElectives = true, userExceptions = []) => {
   const [classmates, setClassmates] = useState([]);
   const [error, setError] = useState(null);
 
@@ -56,6 +57,7 @@ export const useComparisonState = (userStates, showElectives = true) => {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name,
       states,
+      exceptions: sanitizeExceptions(jsonData.exceptions),
       timestamp: jsonData.timestamp || new Date().toISOString()
     };
 
@@ -97,15 +99,15 @@ export const useComparisonState = (userStates, showElectives = true) => {
    */
   const commonSubjects = useMemo(() => {
     if (classmates.length === 0) return [];
-    return findCommonEnrollableSubjects(userStates, classmates, showElectives);
-  }, [userStates, classmates, showElectives]);
+    return findCommonEnrollableSubjects(userStates, classmates, showElectives, userExceptions);
+  }, [userStates, classmates, showElectives, userExceptions]);
 
   /**
    * Calcula compatibilidad del grupo (memoizado)
    */
   const compatibility = useMemo(() => {
-    return calculateGroupCompatibility(userStates, classmates, showElectives);
-  }, [userStates, classmates, showElectives]);
+    return calculateGroupCompatibility(userStates, classmates, showElectives, userExceptions);
+  }, [userStates, classmates, showElectives, userExceptions]);
 
   return {
     classmates,

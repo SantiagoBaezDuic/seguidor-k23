@@ -8,6 +8,7 @@ import subjects from '../data/subjects';
  */
 const ClassmateComparison = ({
   userStates,
+  userExceptions = [],
   classmates,
   commonSubjects,
   compatibility,
@@ -328,7 +329,7 @@ const ClassmateComparison = ({
                     const subject = subjects.find(s => s.id === subjectId);
                     if (!subject) return null;
 
-                    const matrix = getComparisonMatrix(subjectId, userStates, classmates);
+                    const matrix = getComparisonMatrix(subjectId, userStates, classmates, userExceptions);
 
                     return (
                       <div
@@ -374,7 +375,7 @@ const ClassmateComparison = ({
                 
                 <div className="space-y-3">
                   {classmates.map(classmate => {
-                    const pairwiseCommon = findPairwiseCommonSubjects(userStates, classmate, commonSubjects, showElectives);
+                    const pairwiseCommon = findPairwiseCommonSubjects(userStates, classmate, commonSubjects, showElectives, userExceptions);
                     const isExpanded = expandedClassmates.has(classmate.id);
                     
                     if (pairwiseCommon.length === 0) return null;

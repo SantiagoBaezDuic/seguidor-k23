@@ -48,7 +48,7 @@ Subject state is a tri-state integer, not stored on the subject itself: `0` = no
 ### Correlativas engine (`src/utils/correlations.js`)
 
 This is the module that everything else depends on:
-- `canEnroll(subjectId, states)` — true only if all `rc` prerequisites are ≥ regular AND all `ra` prerequisites are ≥ approved.
+- `canEnroll(subjectId, states, exceptions)` — true if the subject has an "excepción de correlativas" (its ID is in `exceptions`, persisted under `isi-tracker-exceptions` by `useSubjectsState`, exported as `exceptions` in v1.3 backups) or if `meetsCorrelatives` holds: all `rc` prerequisites are ≥ regular AND all `ra` prerequisites are ≥ approved. Exceptions only unlock the cursada — `canTakeExam` ignores them.
 - `getAffectedSubjects(subjectId, subjects)` — reverse lookup, used to highlight downstream subjects when a state changes (drives `CorrelationLines` and the 2-second highlight-then-clear behavior in `App.jsx`).
 - `calculateProgress`/`calculateIntermediateProgress` — progress accounts for electives specially: only 7 of the 19 electives count toward the required total, so elective counts are capped when computing `porcentaje`.
 

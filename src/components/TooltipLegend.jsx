@@ -79,6 +79,18 @@ const TooltipLegend = () => {
                   <span className="px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] rounded-full">✗ Bloqueada</span>
                   <span className="text-gray-300">Faltan correlativas</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 border border-amber-500/50 text-amber-300 text-[10px] rounded-full whitespace-nowrap">Pedir excepción</span>
+                  <span className="text-gray-300">Marcá que te otorgaron excepción de correlativas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-amber-500/30 text-amber-200 text-[10px] rounded-full">Excepción</span>
+                  <span className="text-gray-300">Cursás sin correlativas (el final igual las requiere). Click para quitarla</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] rounded-full whitespace-nowrap">✗ Final bloqueado</span>
+                  <span className="text-gray-300">Regular, pero faltan correlativas aprobadas para rendir</span>
+                </div>
               </div>
             </div>
 

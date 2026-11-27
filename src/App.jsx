@@ -24,7 +24,10 @@ function App() {
 
   const {
     states,
+    exceptions,
     toggleSubjectState,
+    toggleException,
+    importExceptions,
     importStates,
     resetStates,
     progress,
@@ -64,7 +67,7 @@ function App() {
     removeClassmate,
     clearAll: clearComparison,
     hasClassmates
-  } = useComparisonState(states, showElectives);
+  } = useComparisonState(states, showElectives, exceptions);
 
   // Podar del horario las materias que el usuario deselecciona en el planificador
   useEffect(() => {
@@ -95,7 +98,7 @@ function App() {
     const subject = subjectsWithStatus.find(s => s.id === subjectId);
     const currentState = states[subjectId] || 0;
     
-    // Si la materia está bloqueada (no cursada y no habilitada), solo resaltar requisitos pendientes
+    // Si la materia está bloqueada (no cursada, no habilitada y sin excepción), solo resaltar requisitos pendientes
     if (currentState === 0 && subject && !subject.canEnroll) {
       // Encontrar requisitos pendientes (los que no llegaron al estado mínimo requerido)
       const pendingReqs = [];
@@ -241,8 +244,10 @@ function App() {
             currentStates={states}
             currentSchedule={schedule}
             currentSelectedCourses={selectedCourses}
+            currentExceptions={exceptions}
             userName={userName}
             onImport={importStates}
+            onImportExceptions={importExceptions}
             onImportSchedule={setSchedule}
             onImportSelectedCourses={applyImportedSelectedCourses}
             onReset={resetStates}
@@ -256,6 +261,7 @@ function App() {
       {/* Comparación con Compañeros */}
       <ClassmateComparison
         userStates={states}
+        userExceptions={exceptions}
         classmates={classmates}
         commonSubjects={commonSubjects}
         compatibility={compatibility}
@@ -297,7 +303,8 @@ function App() {
                   states={states}
                   onSubjectClick={handleSubjectClick}
                   highlightedIds={highlightedSubjects}
-                  comparisonData={hasClassmates ? { userStates: states, classmates } : null}
+                  comparisonData={hasClassmates ? { userStates: states, userExceptions: exceptions, classmates } : null}
+                  onToggleException={toggleException}
                 />
               );
             })}
@@ -314,7 +321,8 @@ function App() {
               states={states}
               onSubjectClick={handleSubjectClick}
               highlightedIds={highlightedSubjects}
-              comparisonData={hasClassmates ? { userStates: states, classmates } : null}
+              comparisonData={hasClassmates ? { userStates: states, userExceptions: exceptions, classmates } : null}
+              onToggleException={toggleException}
               layout="grid"
             />
           </div>

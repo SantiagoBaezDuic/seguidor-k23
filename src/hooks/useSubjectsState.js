@@ -3,7 +3,9 @@ import { useLocalStorage } from './useLocalStorage';
 import subjects from '../data/subjects';
 import {
   canEnroll,
+  meetsCorrelatives,
   canTakeExam,
+  sanitizeExceptions,
   calculateProgress,
   calculateIntermediateProgress,
   checkIntermediateTitle,
@@ -32,6 +34,9 @@ export const useSubjectsState = (showElectives = true) => {
 
   const [states, setStates] = useLocalStorage('isi-tracker-states', initialStates);
   const [statesSchemaVersion, setStatesSchemaVersion] = useLocalStorage('isi-tracker-states-schema-version', null);
+  // Excepciones de correlativas: IDs de materias que se pueden cursar aunque falten correlativas
+  const [storedExceptions, setExceptions] = useLocalStorage('isi-tracker-exceptions', []);
+  const exceptions = useMemo(() => sanitizeExceptions(storedExceptions), [storedExceptions]);
 
   // Migración única: los estados persistidos antes del esquema de 4 estados
   // (0=No cursada, 1=Regular, 2=Aprobada) deben remaparse a (0,1=Cursando,2=Regular,3=Aprobada)
@@ -53,6 +58,26 @@ export const useSubjectsState = (showElectives = true) => {
         [subjectId]: newState
       };
     });
+  };
+
+  /**
+   * Otorga o quita la excepción de correlativas de una materia
+   */
+  const toggleException = (subjectId) => {
+    setExceptions(prev => {
+      const current = sanitizeExceptions(prev);
+      return current.includes(subjectId)
+        ? current.filter(id => id !== subjectId)
+        : [...current, subjectId];
+    });
+  };
+
+  /**
+   * Reemplaza la lista de excepciones (ej. al importar un backup)
+   * @param {Array<number>} newExceptions
+   */
+  const importExceptions = (newExceptions) => {
+    setExceptions(sanitizeExceptions(newExceptions));
   };
 
   /**
@@ -91,6 +116,7 @@ export const useSubjectsState = (showElectives = true) => {
    */
   const resetStates = () => {
     setStates(initialStates);
+    setExceptions([]);
   };
 
   /**
@@ -107,12 +133,18 @@ export const useSubjectsState = (showElectives = true) => {
     const intermediateCompleted = checkIntermediateTitle(states);
     
     // Calcular habilitaciones para cada materia
-    const subjectsWithStatus = subjects.map(subject => ({
-      ...subject,
-      state: states[subject.id] || 0,
-      canEnroll: canEnroll(subject.id, states),
-      canTakeExam: canTakeExam(subject.id, states)
-    }));
+    const subjectsWithStatus = subjects.map(subject => {
+      const meets = meetsCorrelatives(subject.id, states);
+      return {
+        ...subject,
+        state: states[subject.id] || 0,
+        meetsCorrelatives: meets,
+        // La excepción solo es relevante mientras falten correlativas
+        hasException: !meets && exceptions.includes(subject.id),
+        canEnroll: canEnroll(subject.id, states, exceptions),
+        canTakeExam: canTakeExam(subject.id, states)
+      };
+    });
 
     // Finales pendientes (respeta el toggle de electivas)
     const subjectsForPendingFinals = subjects.filter(s => showElectives || s.l !== 6);
@@ -125,11 +157,14 @@ export const useSubjectsState = (showElectives = true) => {
       subjectsWithStatus,
       pendingFinals
     };
-  }, [states, showElectives]);
+  }, [states, exceptions, showElectives]);
 
   return {
     states,
+    exceptions,
     toggleSubjectState,
+    toggleException,
+    importExceptions,
     importStates,
     resetStates,
     ...derivedData
